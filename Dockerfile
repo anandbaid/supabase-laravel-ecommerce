@@ -1,22 +1,46 @@
 FROM php:8.3-apache
 
+# System dependencies
 RUN apt-get update && apt-get install -y \
-    libpq-dev \
-    zip \
+    git \
+    curl \
     unzip \
-    git
+    zip \
+    libpq-dev \
+    gnupg
 
+# PHP extensions
 RUN docker-php-ext-install pdo pdo_pgsql
 
+# Install Node.js 22
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && apt-get install -y nodejs
+
+# Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# Apache configuration
+RUN a2enmod rewrite
 
 WORKDIR /var/www/html
 
+# Copy project files
 COPY . .
 
+# Install PHP dependencies
 RUN composer install --no-dev --optimize-autoloader
 
+# Install Node dependencies and build Vite assets
+RUN npm install
+RUN npm run build
+
+# Laravel permissions
 RUN chown -R www-data:www-data storage bootstrap/cache
+RUN chmod -R 775 storage bootstrap/cache
+
+# Apache DocumentRoot -> public
+RUN sed -i 's!/var/www/html!/var/www/html/public!g' \
+    /etc/apache2/sites-available/000-default.conf
 
 EXPOSE 80
 
