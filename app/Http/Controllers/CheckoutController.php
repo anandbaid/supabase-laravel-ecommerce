@@ -27,19 +27,56 @@ class CheckoutController extends Controller
 
         $summary = CartController::calculate();
         $addresses = Auth::check() ? Auth::user()->addresses()->get() : collect();
+        $prefill = $addresses->firstWhere('is_default', true) ?? $addresses->first();
 
-        return view('checkout.index', array_merge($summary, ['addresses' => $addresses]));
+        return view('checkout.index', array_merge($summary, [
+            'addresses' => $addresses,
+            'prefill' => $prefill,
+        ]));
     }
 
     public function store(Request $request)
     {
-        $request->validate([
+        $same = $request->boolean('same_as_billing');
+
+        $rules = [
+            'first_name' => 'required|string|max:100',
+            'last_name' => 'required|string|max:100',
+            'customer_email' => 'required|email|max:255',
+            'customer_phone' => 'required|string|max:30',
+            'company_name' => 'nullable|string|max:150',
+            'billing_country' => 'required|string|max:100',
+            'billing_line1' => 'required|string|max:255',
+            'billing_line2' => 'nullable|string|max:255',
+            'billing_city' => 'required|string|max:100',
+            'billing_state' => 'required|string|max:100',
+            'billing_postal_code' => 'required|string|max:20',
+            'same_as_billing' => 'nullable|boolean',
             'address_id' => 'nullable|exists:addresses,id',
-            'customer_name' => 'required_without:address_id|nullable|string|max:255',
-            'customer_email' => 'required|email',
-            'customer_phone' => 'nullable|string|max:30',
-            'shipping_address' => 'required_without:address_id|nullable|string',
+            'notes' => 'nullable|string|max:500',
             'payment_method' => 'required|in:cod,card',
+        ];
+
+        // A separate shipping address is only required when it differs from
+        // billing AND no saved address was picked.
+        if (! $same && ! $request->filled('address_id')) {
+            $rules += [
+                'shipping_first_name' => 'required|string|max:100',
+                'shipping_last_name' => 'required|string|max:100',
+                'shipping_phone' => 'required|string|max:30',
+                'shipping_country' => 'required|string|max:100',
+                'shipping_line1' => 'required|string|max:255',
+                'shipping_line2' => 'nullable|string|max:255',
+                'shipping_city' => 'required|string|max:100',
+                'shipping_state' => 'required|string|max:100',
+                'shipping_postal_code' => 'required|string|max:20',
+            ];
+        }
+
+        $request->validate($rules, [
+            'shipping_first_name.required' => 'Please enter the recipient\'s first name.',
+            'shipping_last_name.required' => 'Please enter the recipient\'s last name.',
+            'shipping_line1.required' => 'Please enter the shipping street address.',
         ]);
 
         $cart = Session::get('cart', []);
@@ -47,12 +84,39 @@ class CheckoutController extends Controller
             return redirect()->route('cart.index')->with('error', 'Your cart is empty.');
         }
 
+        $customerName = trim($request->first_name . ' ' . $request->last_name);
+
+        $billingText = $this->formatAddress(
+            $customerName,
+            $request->billing_line1,
+            $request->billing_line2,
+            $request->billing_city,
+            $request->billing_state,
+            $request->billing_postal_code,
+            $request->billing_country,
+            $request->customer_phone
+        );
+
         $address = null;
-        if ($request->filled('address_id')) {
+        if ($same) {
+            $shippingText = $billingText;
+        } elseif ($request->filled('address_id')) {
             $address = Address::find($request->address_id);
-            if (!$address || (Auth::id() && $address->user_id !== Auth::id())) {
-                return back()->with('error', 'That address could not be used. Please choose another.');
+            if (! $address || $address->user_id !== Auth::id()) {
+                return back()->withInput()->with('error', 'That address could not be used. Please choose another.');
             }
+            $shippingText = $address->formatted();
+        } else {
+            $shippingText = $this->formatAddress(
+                trim($request->shipping_first_name . ' ' . $request->shipping_last_name),
+                $request->shipping_line1,
+                $request->shipping_line2,
+                $request->shipping_city,
+                $request->shipping_state,
+                $request->shipping_postal_code,
+                $request->shipping_country,
+                $request->shipping_phone
+            );
         }
 
         $products = Product::whereIn('id', array_keys($cart))->get()->keyBy('id');
@@ -63,21 +127,25 @@ class CheckoutController extends Controller
         }
 
         try {
-            $order = DB::transaction(function () use ($request, $cart, $products, $summary, $address) {
+            $order = DB::transaction(function () use ($request, $cart, $products, $summary, $address, $customerName, $billingText, $shippingText) {
                 $coupon = $summary['coupon'];
 
                 $order = Order::create([
                     'user_id' => Auth::id(),
-                    'customer_name' => $address->full_name ?? $request->customer_name,
+                    'customer_name' => $customerName,
                     'customer_email' => $request->customer_email,
-                    'customer_phone' => $address->phone ?? $request->customer_phone,
-                    'shipping_address' => $address ? $address->formatted() : $request->shipping_address,
+                    'customer_phone' => $request->customer_phone,
+                    'company_name' => $request->company_name,
+                    'billing_address' => $billingText,
+                    'shipping_address' => $shippingText,
                     'address_id' => $address?->id,
                     'subtotal' => $summary['subtotal'],
                     'tax_rate' => $summary['taxRate'],
                     'tax_amount' => $summary['taxAmount'],
                     'coupon_code' => $coupon?->code,
                     'discount_amount' => $summary['discount'],
+                    'shipping_amount' => $summary['shipping'],
+                    'notes' => $request->notes,
                     'total' => $summary['total'],
                     'payment_method' => $request->payment_method,
                     'status' => 'pending',
@@ -126,6 +194,19 @@ class CheckoutController extends Controller
         return redirect()->route('checkout.success', $order->order_number);
     }
 
+    /** Build a multi-line postal address block (same shape as Address::formatted()). */
+    private function formatAddress(string $name, string $line1, ?string $line2, string $city, string $state, string $zip, string $country, ?string $phone): string
+    {
+        return implode("\n", array_filter([
+            $name,
+            $line1,
+            $line2,
+            trim($city . ', ' . $state . ' ' . $zip, ', '),
+            $country,
+            $phone ? 'Phone: ' . $phone : null,
+        ]));
+    }
+
     /**
      * @throws ApiErrorException
      */
@@ -150,6 +231,17 @@ class CheckoutController extends Controller
                     'currency' => config('services.stripe.currency', 'usd'),
                     'product_data' => ['name' => 'Tax'],
                     'unit_amount' => (int) round($order->tax_amount * 100),
+                ],
+                'quantity' => 1,
+            ];
+        }
+
+        if ($order->shipping_amount > 0) {
+            $lineItems[] = [
+                'price_data' => [
+                    'currency' => config('services.stripe.currency', 'usd'),
+                    'product_data' => ['name' => 'Shipping'],
+                    'unit_amount' => (int) round($order->shipping_amount * 100),
                 ],
                 'quantity' => 1,
             ];

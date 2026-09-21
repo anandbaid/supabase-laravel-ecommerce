@@ -50,6 +50,21 @@ class ShopController extends Controller
             ->where('id', '!=', $product->id)
             ->take(4)->get();
 
-        return view('shop.show', compact('product', 'related'));
+        $reviewSummary = $product->reviewSummary();
+
+        $reviews = $product->reviews()
+            ->with('user:id,name')
+            ->latest()
+            ->paginate(5, ['*'], 'reviews_page')
+            ->withQueryString()
+            ->fragment('reviews');
+
+        $user = auth()->user();
+        $canReview = $user && ! $user->isAdmin();
+        $myReview = $canReview
+            ? $product->reviews()->where('user_id', $user->id)->first()
+            : null;
+
+        return view('shop.show', compact('product', 'related', 'reviewSummary', 'reviews', 'canReview', 'myReview'));
     }
 }

@@ -48,6 +48,50 @@ class Product extends Model
         return $this->hasMany(OrderItem::class);
     }
 
+    public function reviews()
+    {
+        return $this->hasMany(Review::class);
+    }
+
+    /** @var array<string, mixed>|null */
+    protected ?array $reviewSummaryCache = null;
+
+    /**
+     * Rating summary for this product, computed with a single grouped query
+     * and memoised for the request.
+     *
+     * @return array{average: float, count: int, breakdown: array<int, array{count: int, percent: int}>}
+     */
+    public function reviewSummary(): array
+    {
+        if ($this->reviewSummaryCache !== null) {
+            return $this->reviewSummaryCache;
+        }
+
+        $counts = $this->reviews()
+            ->selectRaw('rating, COUNT(*) as total')
+            ->groupBy('rating')
+            ->pluck('total', 'rating');
+
+        $count = (int) $counts->sum();
+        $weighted = $counts->reduce(fn ($carry, $total, $rating) => $carry + ((int) $rating * (int) $total), 0);
+
+        $breakdown = [];
+        foreach ([5, 4, 3, 2, 1] as $star) {
+            $n = (int) ($counts[$star] ?? 0);
+            $breakdown[$star] = [
+                'count' => $n,
+                'percent' => $count > 0 ? (int) round($n / $count * 100) : 0,
+            ];
+        }
+
+        return $this->reviewSummaryCache = [
+            'average' => $count > 0 ? round($weighted / $count, 1) : 0.0,
+            'count' => $count,
+            'breakdown' => $breakdown,
+        ];
+    }
+
     public function imageUrl(): string
     {
         return $this->imageUrlLarge();

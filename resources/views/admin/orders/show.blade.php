@@ -22,6 +22,9 @@
         </table>
         <div class="flex justify-end border-t mt-4 pt-4">
             <div class="text-right">
+                @if($order->shipping_amount > 0)
+                    <div class="text-gray-500 text-sm">Shipping: ${{ number_format($order->shipping_amount, 2) }}</div>
+                @endif
                 <div class="text-gray-500 text-sm">Total</div>
                 <div class="text-xl font-bold text-blue-600">${{ number_format($order->total, 2) }}</div>
             </div>
@@ -32,7 +35,19 @@
             <p class="text-sm"><span class="text-gray-500">Name:</span> {{ $order->customer_name }}</p>
             <p class="text-sm"><span class="text-gray-500">Email:</span> {{ $order->customer_email }}</p>
             <p class="text-sm"><span class="text-gray-500">Phone:</span> {{ $order->customer_phone ?: '—' }}</p>
-            <p class="text-sm mt-2"><span class="text-gray-500">Address:</span> {{ $order->shipping_address }}</p>
+            @if($order->company_name)
+                <p class="text-sm"><span class="text-gray-500">Company:</span> {{ $order->company_name }}</p>
+            @endif
+            <p class="text-sm mt-2"><span class="text-gray-500">Shipping address:</span></p>
+            <p class="text-sm whitespace-pre-line">{{ $order->shipping_address }}</p>
+            @if($order->billing_address && $order->billing_address !== $order->shipping_address)
+                <p class="text-sm mt-2"><span class="text-gray-500">Billing address:</span></p>
+                <p class="text-sm whitespace-pre-line">{{ $order->billing_address }}</p>
+            @endif
+            @if($order->notes)
+                <p class="text-sm mt-3"><span class="text-gray-500">Order notes:</span></p>
+                <p class="text-sm whitespace-pre-line bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2 mt-1">{{ $order->notes }}</p>
+            @endif
         </div>
     </div>
 

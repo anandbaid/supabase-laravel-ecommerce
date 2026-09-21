@@ -28,4 +28,16 @@ class Setting extends Model
     {
         return (float) static::get('tax_rate', 0);
     }
+
+    /** Flat shipping fee charged when the order is below the free-shipping threshold. */
+    public static function shippingFee(): float
+    {
+        return (float) static::get('shipping_fee', 2);
+    }
+
+    /** Order subtotal at (or above) which shipping is free. */
+    public static function freeShippingThreshold(): float
+    {
+        return (float) static::get('free_shipping_threshold', 50);
+    }
 }

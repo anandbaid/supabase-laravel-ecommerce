@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Order Confirmed - ShopEase')
+@section('title', 'Order Confirmed - Let's Shop')
 
 @section('content')
 <div class="max-w-2xl mx-auto px-4 py-16 text-center">
@@ -35,6 +35,7 @@
             @if($order->coupon_code)
                 <div class="flex justify-between text-green-600"><span>Discount ({{ $order->coupon_code }})</span><span>-${{ number_format($order->discount_amount, 2) }}</span></div>
             @endif
+            <div class="flex justify-between"><span class="text-gray-500">Shipping</span><span>{{ $order->shipping_amount > 0 ? '$' . number_format($order->shipping_amount, 2) : 'Free' }}</span></div>
             @if($order->tax_amount > 0)
                 <div class="flex justify-between"><span class="text-gray-500">Tax</span><span>${{ number_format($order->tax_amount, 2) }}</span></div>
             @endif

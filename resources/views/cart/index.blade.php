@@ -1,82 +1,148 @@
 @extends('layouts.app')
-@section('title', 'Your Cart - ShopEase')
+@section('title', 'Your Cart - Let\'s Shop')
 
 @section('content')
-<div class="max-w-5xl mx-auto px-4 py-10">
-    <h1 class="text-2xl font-bold mb-6">Your Cart</h1>
+@php
+    $itemCount = collect($items)->sum('qty');
+    $money = fn ($n) => '$' . number_format($n, 2);
+    $maxLine = \App\Http\Controllers\CartController::MAX_QTY_PER_ITEM;
+@endphp
+<div class="max-w-7xl mx-auto px-4 py-8">
+    <div class="flex items-center gap-4 mb-6">
+        <div class="w-14 h-14 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center"><i data-lucide="shopping-cart" class="w-6 h-6"></i></div>
+        <div>
+            <h1 class="text-2xl font-bold text-slate-900">Your Cart</h1>
+            <p class="text-sm text-gray-500">{{ $itemCount }} {{ \Illuminate\Support\Str::plural('item', $itemCount) }} in your cart</p>
+        </div>
+    </div>
 
     @if(empty($items))
-        <div class="bg-white rounded-xl shadow-sm p-12 text-center">
-            <p class="text-gray-400 mb-4">Your cart is empty.</p>
-            <a href="{{ route('shop.index') }}" class="bg-blue-600 text-white px-5 py-2 rounded-lg text-sm">Continue Shopping</a>
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-12 text-center">
+            <div class="w-16 h-16 rounded-full bg-blue-50 text-blue-500 mx-auto flex items-center justify-center mb-4"><i data-lucide="shopping-bag" class="w-7 h-7"></i></div>
+            <h2 class="font-semibold text-slate-900 mb-1">Your cart is empty</h2>
+            <p class="text-gray-500 text-sm mb-5">Add something you like and it will show up here.</p>
+            <a href="{{ route('shop.index') }}" class="inline-block bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg text-sm font-medium">Browse the shop</a>
         </div>
     @else
-        <div class="bg-white rounded-xl shadow-sm divide-y">
-            @foreach($items as $item)
-                <div class="flex items-center gap-4 p-4">
-                    <img src="{{ $item['product']->imageUrl() }}" class="w-16 h-16 object-contain bg-gray-50 rounded-lg">
-                    <div class="flex-1">
-                        <a href="{{ route('shop.show', $item['product']->slug) }}" class="font-medium hover:text-blue-600">{{ $item['product']->name }}</a>
-                        <div class="text-sm text-gray-500">${{ number_format($item['product']->finalPrice(), 2) }} each</div>
-                    </div>
-                    <form action="{{ route('cart.update', $item['product']) }}" method="POST" class="flex items-center gap-2">
-                        @csrf @method('PATCH')
-                        <input type="number" name="qty" value="{{ $item['qty'] }}" min="1" class="w-16 border rounded-lg px-2 py-1 text-sm" onchange="this.form.submit()">
-                    </form>
-                    <div class="w-24 text-right font-semibold">${{ number_format($item['subtotal'], 2) }}</div>
-                    <form action="{{ route('cart.remove', $item['product']) }}" method="POST">
-                        @csrf @method('DELETE')
-                        <button class="text-red-500 hover:text-red-700 text-sm">Remove</button>
-                    </form>
-                </div>
-            @endforeach
-        </div>
-
-        <div class="flex flex-col md:flex-row md:justify-end gap-4 mt-6">
-            <div class="bg-white rounded-xl shadow-sm p-6 w-full max-w-sm">
-                <h3 class="font-semibold text-sm mb-2">Have a coupon code?</h3>
-                @if($coupon)
-                    <div class="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg px-3 py-2 text-sm">
-                        <span class="text-green-700 font-medium">{{ $coupon->code }} applied</span>
-                        <form action="{{ route('cart.coupon.remove') }}" method="POST">
-                            @csrf @method('DELETE')
-                            <button class="text-red-500 hover:underline text-xs">Remove</button>
-                        </form>
+        <div class="grid lg:grid-cols-[1fr_380px] gap-6 items-start">
+            {{-- Left column --}}
+            <div class="space-y-5 min-w-0">
+                @if($freeShippingRemaining > 0)
+                    @php $progress = min(100, round($subtotal / $freeShippingThreshold * 100)); @endphp
+                    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+                        <div class="flex items-center gap-2 text-sm text-slate-700 mb-2">
+                            <i data-lucide="truck" class="w-4 h-4 text-blue-600"></i>
+                            Add <span class="font-semibold">{{ $money($freeShippingRemaining) }}</span> more for free shipping
+                        </div>
+                        <div class="h-2 bg-gray-100 rounded-full overflow-hidden"><div class="h-full bg-blue-600 rounded-full" style="width: {{ $progress }}%"></div></div>
                     </div>
                 @else
-                    <form action="{{ route('cart.coupon.apply') }}" method="POST" class="flex gap-2">
-                        @csrf
-                        <input type="text" name="code" placeholder="Enter coupon code" class="flex-1 border rounded-lg px-3 py-2 text-sm uppercase">
-                        <button class="bg-gray-800 text-white px-4 py-2 rounded-lg text-sm">Apply</button>
-                    </form>
+                    <div class="bg-green-50 border border-green-200 text-green-700 rounded-2xl p-4 text-sm flex items-center gap-2">
+                        <i data-lucide="party-popper" class="w-4 h-4"></i> You've unlocked free shipping.
+                    </div>
                 @endif
-            </div>
 
-            <div class="bg-white rounded-xl shadow-sm p-6 w-full max-w-sm">
-                <div class="space-y-2 text-sm mb-4">
-                    <div class="flex justify-between">
-                        <span class="text-gray-500">Subtotal</span>
-                        <span>${{ number_format($subtotal, 2) }}</span>
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 divide-y divide-gray-100">
+                    @foreach($items as $item)
+                        @php
+                            $p = $item['product'];
+                            $lineMax = max(1, min($maxLine, (int) $p->stock));
+                        @endphp
+                        <div class="p-5 flex gap-4 sm:gap-6">
+                            <a href="{{ route('shop.show', $p->slug) }}" class="w-24 h-24 sm:w-32 sm:h-32 rounded-xl bg-gray-50 shrink-0 flex items-center justify-center overflow-hidden">
+                                <img src="{{ $p->imageUrl() }}" alt="{{ $p->name }}" class="w-full h-full object-contain p-2">
+                            </a>
+                            <div class="flex-1 min-w-0 flex flex-col">
+                                <div class="flex items-start justify-between gap-3">
+                                    <div class="min-w-0">
+                                        <a href="{{ route('shop.show', $p->slug) }}" class="font-semibold text-lg text-slate-900 hover:text-blue-600 block truncate">{{ $p->name }}</a>
+                                        @if($p->stock > 0)
+                                            <span class="inline-flex items-center gap-1 mt-1 text-xs text-green-700 bg-green-50 px-2 py-0.5 rounded-md"><i data-lucide="check" class="w-3 h-3"></i> In Stock</span>
+                                        @else
+                                            <span class="inline-flex items-center gap-1 mt-1 text-xs text-red-700 bg-red-50 px-2 py-0.5 rounded-md">Out of stock</span>
+                                        @endif
+                                        <div class="text-sm text-gray-500 mt-2">{{ $money($p->finalPrice()) }} each</div>
+                                    </div>
+                                    <div class="font-bold text-lg text-slate-900">{{ $money($item['subtotal']) }}</div>
+                                </div>
+
+                                <div class="flex items-end justify-between mt-auto pt-3">
+                                    <form action="{{ route('cart.update', $p) }}" method="POST" class="inline-flex items-center border border-gray-200 rounded-lg overflow-hidden">
+                                        @csrf @method('PATCH')
+                                        <button name="qty" value="{{ max(1, $item['qty'] - 1) }}" @disabled($item['qty'] <= 1) aria-label="Decrease quantity" class="w-10 h-10 flex items-center justify-center text-gray-600 hover:bg-gray-50 disabled:text-gray-300 disabled:hover:bg-transparent"><i data-lucide="minus" class="w-4 h-4"></i></button>
+                                        <span class="w-12 text-center text-sm font-medium" aria-live="polite">{{ $item['qty'] }}</span>
+                                        <button name="qty" value="{{ $item['qty'] + 1 }}" @disabled($item['qty'] >= $lineMax) aria-label="Increase quantity" class="w-10 h-10 flex items-center justify-center text-gray-600 hover:bg-gray-50 disabled:text-gray-300 disabled:hover:bg-transparent"><i data-lucide="plus" class="w-4 h-4"></i></button>
+                                    </form>
+                                    <form action="{{ route('cart.remove', $p) }}" method="POST">
+                                        @csrf @method('DELETE')
+                                        <button aria-label="Remove {{ $p->name }} from cart" class="w-10 h-10 rounded-lg bg-gray-50 text-gray-500 hover:bg-red-50 hover:text-red-600 flex items-center justify-center"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                                    </form>
+                                </div>
+                                @if($item['qty'] >= $lineMax)
+                                    <p class="text-xs text-gray-400 mt-2">Maximum {{ $lineMax }} per order for this item.</p>
+                                @endif
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+
+                {{-- Coupon --}}
+                <div class="bg-blue-50/60 border border-blue-100 rounded-2xl p-5 flex flex-col md:flex-row md:items-center gap-4">
+                    <div class="flex items-center gap-4 flex-1">
+                        <div class="w-12 h-12 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center shrink-0"><i data-lucide="ticket" class="w-5 h-5"></i></div>
+                        <div>
+                            <div class="font-semibold text-slate-900">Have a coupon code?</div>
+                            <div class="text-sm text-gray-500">Enter your coupon code to get a discount on your order.</div>
+                        </div>
                     </div>
                     @if($coupon)
-                        <div class="flex justify-between text-green-600">
-                            <span>Discount</span>
-                            <span>-${{ number_format($discount, 2) }}</span>
+                        <div class="flex items-center justify-between gap-3 bg-green-50 border border-green-200 rounded-lg px-4 py-2.5 text-sm md:w-72">
+                            <span class="text-green-700 font-medium">{{ $coupon->code }} applied</span>
+                            <form action="{{ route('cart.coupon.remove') }}" method="POST">
+                                @csrf @method('DELETE')
+                                <button class="text-red-500 hover:underline text-xs">Remove</button>
+                            </form>
                         </div>
-                    @endif
-                    @if($taxRate > 0)
-                        <div class="flex justify-between">
-                            <span class="text-gray-500">Tax ({{ rtrim(rtrim(number_format($taxRate, 2), '0'), '.') }}%)</span>
-                            <span>${{ number_format($taxAmount, 2) }}</span>
-                        </div>
+                    @else
+                        <form action="{{ route('cart.coupon.apply') }}" method="POST" class="flex gap-2 md:w-96">
+                            @csrf
+                            <input type="text" name="code" placeholder="Enter coupon code" aria-label="Coupon code" class="flex-1 min-w-0 border border-gray-200 rounded-lg px-3 py-2.5 text-sm uppercase placeholder:normal-case focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+                            <button class="bg-blue-600 hover:bg-blue-700 text-white px-5 rounded-lg text-sm font-medium">Apply</button>
+                        </form>
                     @endif
                 </div>
-                <div class="flex justify-between mb-4 border-t pt-3">
-                    <span class="text-gray-500">Total</span>
-                    <span class="text-xl font-bold text-blue-600">${{ number_format($total, 2) }}</span>
-                </div>
-                <a href="{{ route('checkout.index') }}" class="block text-center bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700">Proceed to Checkout</a>
+
+                <a href="{{ route('shop.index') }}" class="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 text-sm font-medium"><i data-lucide="arrow-left" class="w-4 h-4"></i> Continue Shopping</a>
             </div>
+
+            {{-- Order summary --}}
+            <aside class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 lg:sticky lg:top-24">
+                <h2 class="text-xl font-bold text-slate-900 mb-5">Order Summary</h2>
+                <dl class="space-y-3 text-sm">
+                    <div class="flex justify-between"><dt class="text-gray-500">Subtotal ({{ $itemCount }} {{ \Illuminate\Support\Str::plural('item', $itemCount) }})</dt><dd class="font-medium">{{ $money($subtotal) }}</dd></div>
+                    @if($coupon)
+                        <div class="flex justify-between text-green-600"><dt>Discount ({{ $coupon->code }})</dt><dd class="font-medium">-{{ $money($discount) }}</dd></div>
+                    @endif
+                    <div class="flex justify-between"><dt class="text-gray-500">Shipping</dt><dd class="font-medium">{{ $shipping > 0 ? $money($shipping) : 'Free' }}</dd></div>
+                    @if($taxRate > 0)
+                        <div class="flex justify-between"><dt class="text-gray-500">Tax ({{ rtrim(rtrim(number_format($taxRate, 2), '0'), '.') }}%)</dt><dd class="font-medium">{{ $money($taxAmount) }}</dd></div>
+                    @endif
+                </dl>
+                <div class="flex justify-between items-baseline border-t border-gray-100 mt-4 pt-4">
+                    <span class="text-lg font-bold text-slate-900">Total</span>
+                    <span class="text-2xl font-bold text-blue-600">{{ $money($total) }}</span>
+                </div>
+                <a href="{{ route('checkout.index') }}" class="mt-5 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-lg font-semibold">
+                    <i data-lucide="lock" class="w-4 h-4"></i> Proceed to Checkout
+                </a>
+
+                <div class="grid grid-cols-2 gap-3 mt-6 text-xs text-gray-600">
+                    <div class="flex items-center gap-2"><i data-lucide="shield-check" class="w-5 h-5 text-gray-500 shrink-0"></i> Secure Checkout</div>
+                    <div class="flex items-center gap-2"><i data-lucide="truck" class="w-5 h-5 text-gray-500 shrink-0"></i> Fast Delivery</div>
+                    <div class="flex items-center gap-2"><i data-lucide="refresh-cw" class="w-5 h-5 text-gray-500 shrink-0"></i> Easy Returns</div>
+                    <div class="flex items-center gap-2"><i data-lucide="headphones" class="w-5 h-5 text-gray-500 shrink-0"></i> 24/7 Support</div>
+                </div>
+            </aside>
         </div>
     @endif
 </div>

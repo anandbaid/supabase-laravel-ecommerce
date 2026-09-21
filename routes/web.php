@@ -13,6 +13,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\ShopController;
 use App\Http\Controllers\StripeWebhookController;
 use Illuminate\Support\Facades\Route;
@@ -30,6 +31,7 @@ Route::get('/shop/{product:slug}', [ShopController::class, 'show'])->name('shop.
 // Cart stays open to everyone (guests included) — no login required to add to cart.
 Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
 Route::post('/cart/{product}/add', [CartController::class, 'add'])->name('cart.add');
+Route::post('/cart/{product}/buy-now', [CartController::class, 'buyNow'])->name('cart.buy-now');
 Route::patch('/cart/{product}', [CartController::class, 'update'])->name('cart.update');
 Route::delete('/cart/{product}', [CartController::class, 'remove'])->name('cart.remove');
 Route::delete('/cart', [CartController::class, 'clear'])->name('cart.clear');
@@ -60,6 +62,10 @@ Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->n
 
 // My Account — any logged-in user (customer or admin) can view/edit their own details.
 Route::middleware('auth')->group(function () {
+    // Product reviews — any logged-in user can write/edit/delete their own.
+    Route::post('/shop/{product:slug}/reviews', [ReviewController::class, 'store'])->name('reviews.store');
+    Route::delete('/reviews/{review}', [ReviewController::class, 'destroy'])->name('reviews.destroy');
+
     Route::get('/account', [AccountController::class, 'edit'])->name('account.edit');
     Route::patch('/account', [AccountController::class, 'update'])->name('account.update');
 

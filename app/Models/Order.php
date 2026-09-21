@@ -13,7 +13,7 @@ class Order extends Model
     protected $fillable = [
         'order_number', 'user_id', 'customer_name', 'customer_email', 'customer_phone',
         'shipping_address', 'address_id', 'subtotal', 'tax_rate', 'tax_amount',
-        'coupon_code', 'discount_amount', 'total', 'status', 'payment_method', 'payment_status',
+        'coupon_code', 'discount_amount', 'shipping_amount', 'company_name', 'billing_address', 'notes', 'total', 'status', 'payment_method', 'payment_status',
     ];
 
     protected static function boot()
