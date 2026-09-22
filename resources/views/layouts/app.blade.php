@@ -30,24 +30,29 @@
 
         <div class="flex items-center gap-4">
             @auth
-                <div class="relative group">
-                    <button class="flex items-center gap-1 text-sm font-medium text-gray-700">{{ auth()->user()->name }}</button>
-                    <div class="absolute right-0 hidden group-hover:block bg-white border rounded-lg shadow-lg mt-1 w-44 py-1 text-sm">
-                        <a href="{{ route('account.edit') }}" class="flex items-center gap-2 px-4 py-2 hover:bg-gray-50">
-                            <i data-lucide="user-circle" class="w-4 h-4"></i> My Account
-                        </a>
-                        <a href="{{ route('addresses.index') }}" class="flex items-center gap-2 px-4 py-2 hover:bg-gray-50">
-                            <i data-lucide="map-pin" class="w-4 h-4"></i> My Addresses
-                        </a>
-                        @if(auth()->user()->isAdmin())
-                            <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-2 px-4 py-2 hover:bg-gray-50">
-                                <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Admin Panel
-                            </a>
-                        @endif
-                        <form action="{{ route('logout') }}" method="POST">
-                            @csrf
-                            <button class="w-full text-left px-4 py-2 hover:bg-gray-50">Logout</button>
-                        </form>
+                <div class="relative" data-account-menu>
+                    <button type="button" data-account-menu-trigger aria-haspopup="true" aria-expanded="false" class="flex items-center gap-1 text-sm font-medium text-gray-700 hover:text-blue-600">
+                        {{ auth()->user()->name }} <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
+                    </button>
+                    <div data-account-menu-panel class="hidden absolute right-0 top-full pt-2 w-44 z-20">
+                        <div class="bg-white border rounded-lg shadow-lg py-1 text-sm">
+                            @unless(auth()->user()->isAdmin())
+                                <a href="{{ route('account.edit') }}" class="flex items-center gap-2 px-4 py-2 hover:bg-gray-50">
+                                    <i data-lucide="user-circle" class="w-4 h-4"></i> My Account
+                                </a>
+                                <a href="{{ route('addresses.index') }}" class="flex items-center gap-2 px-4 py-2 hover:bg-gray-50">
+                                    <i data-lucide="map-pin" class="w-4 h-4"></i> My Addresses
+                                </a>
+                            @else
+                                <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-2 px-4 py-2 hover:bg-gray-50">
+                                    <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Admin Panel
+                                </a>
+                            @endunless
+                            <form action="{{ route('logout') }}" method="POST">
+                                @csrf
+                                <button class="w-full text-left px-4 py-2 hover:bg-gray-50">Logout</button>
+                            </form>
+                        </div>
                     </div>
                 </div>
             @else
@@ -109,6 +114,27 @@
 
 <script>
     if (window.lucide) lucide.createIcons();
+
+    // Header account menu: click to open/close (no hover, so it never "vanishes" on the way to it).
+    (function () {
+        var wrap = document.querySelector('[data-account-menu]');
+        if (!wrap) return;
+        var trigger = wrap.querySelector('[data-account-menu-trigger]');
+        var panel = wrap.querySelector('[data-account-menu-panel]');
+
+        function close() {
+            panel.classList.add('hidden');
+            trigger.setAttribute('aria-expanded', 'false');
+        }
+        function toggle() {
+            var open = panel.classList.contains('hidden');
+            panel.classList.toggle('hidden', !open);
+            trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+        }
+        trigger.addEventListener('click', function (e) { e.stopPropagation(); toggle(); });
+        document.addEventListener('click', function (e) { if (!wrap.contains(e.target)) close(); });
+        document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+    })();
 </script>
 @stack('scripts')
 
