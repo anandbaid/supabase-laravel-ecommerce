@@ -32,6 +32,37 @@
             <div class="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3 mt-3">{{ session('error') }}</div>
         @endif
 
+        @if(!in_array($order->status, ['cancelled']))
+            @php
+                $steps = ['pending' => 'Placed', 'processing' => 'Processing', 'shipped' => 'Shipped', 'delivered' => 'Delivered'];
+                $stepKeys = array_keys($steps);
+                $currentIndex = array_search($order->status, $stepKeys, true);
+                $currentIndex = $currentIndex === false ? 0 : $currentIndex;
+            @endphp
+            <div class="mt-6 mb-2">
+                <div class="flex items-center">
+                    @foreach($steps as $key => $label)
+                        @php $done = array_search($key, $stepKeys, true) <= $currentIndex; @endphp
+                        <div class="flex-1 flex items-center {{ $loop->last ? 'flex-none' : '' }}">
+                            <div class="flex flex-col items-center {{ $loop->last ? '' : 'flex-1' }}">
+                                <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold {{ $done ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-400' }}">
+                                    @if($done)
+                                        <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                                    @else
+                                        {{ $loop->iteration }}
+                                    @endif
+                                </div>
+                                <span class="text-[11px] mt-1 {{ $done ? 'text-blue-600 font-medium' : 'text-gray-400' }}">{{ $label }}</span>
+                            </div>
+                            @if(!$loop->last)
+                                <div class="h-0.5 flex-1 -mt-4 {{ array_search($key, $stepKeys, true) < $currentIndex ? 'bg-blue-600' : 'bg-gray-100' }}"></div>
+                            @endif
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        @endif
+
         @if($order->cancelledByCustomer())
             <div class="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 mt-3 text-sm text-gray-600">
                 Cancelled on {{ $order->cancelled_at->format('d M Y') }}{{ $order->cancellation_reason ? ' — "' . $order->cancellation_reason . '"' : '' }}

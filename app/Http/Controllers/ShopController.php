@@ -52,6 +52,32 @@ class ShopController extends Controller
         return view('shop.index', compact('products', 'categories'));
     }
 
+    /**
+     * Lightweight JSON endpoint for the header search dropdown — returns a
+     * handful of matching active products as the user types, without a full
+     * page reload.
+     */
+    public function suggest(Request $request)
+    {
+        $term = trim((string) $request->get('q', ''));
+
+        if (mb_strlen($term) < 2) {
+            return response()->json([]);
+        }
+
+        $products = Product::active()
+            ->where('name', 'like', '%' . $term . '%')
+            ->take(6)
+            ->get(['id', 'name', 'slug', 'price', 'discount_price', 'image', 'image_small']);
+
+        return response()->json($products->map(fn ($p) => [
+            'name' => $p->name,
+            'url' => route('shop.show', $p->slug),
+            'image' => $p->imageUrlSmall(),
+            'price' => number_format($p->finalPrice(), 2),
+        ]));
+    }
+
     public function show(Product $product)
     {
         abort_unless($product->is_active, 404);

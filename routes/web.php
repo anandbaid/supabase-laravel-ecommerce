@@ -7,12 +7,14 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\SettingsController as AdminSettingsController;
+use App\Http\Controllers\Admin\SubscriberController as AdminSubscriberController;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\AddressController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\NewsletterController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\WishlistController;
 use App\Http\Controllers\ReviewController;
@@ -44,6 +46,7 @@ Route::get('/contact', [StaticPageController::class, 'contact'])->name('static.c
 Route::post('/contact', [StaticPageController::class, 'contactSubmit'])->name('static.contact.submit');
 
 Route::get('/shop', [ShopController::class, 'index'])->name('shop.index');
+Route::get('/shop/suggest', [ShopController::class, 'suggest'])->name('shop.suggest');
 Route::get('/shop/{product:slug}', [ShopController::class, 'show'])->name('shop.show');
 
 // Cart stays open to everyone (guests included) — no login required to add to cart.
@@ -67,6 +70,8 @@ Route::middleware('can-checkout')->group(function () {
 Route::get('/checkout/success/{orderNumber}', [CheckoutController::class, 'success'])->name('checkout.success');
 
 Route::post('/stripe/webhook', [StripeWebhookController::class, 'handle'])->name('stripe.webhook');
+
+Route::post('/newsletter/subscribe', [NewsletterController::class, 'store'])->name('newsletter.subscribe');
 
 /*
 |--------------------------------------------------------------------------
@@ -136,4 +141,6 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::get('customers/{customer}/edit', [AdminCustomerController::class, 'edit'])->name('customers.edit');
     Route::put('customers/{customer}', [AdminCustomerController::class, 'update'])->name('customers.update');
     Route::delete('customers/{customer}', [AdminCustomerController::class, 'destroy'])->name('customers.destroy');
+
+    Route::get('subscribers', [AdminSubscriberController::class, 'index'])->name('subscribers.index');
 });

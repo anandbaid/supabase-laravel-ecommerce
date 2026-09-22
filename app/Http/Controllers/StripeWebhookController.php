@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\OrderConfirmed;
 use App\Models\Order;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Stripe\Exception\SignatureVerificationException;
 use Stripe\Webhook;
 use Throwable;
@@ -42,11 +44,24 @@ class StripeWebhookController extends Controller
                     : Order::where('stripe_checkout_session_id', $session->id)->first();
 
                 if ($order) {
+                    $wasAlreadyPaid = $order->payment_status === 'paid';
+
                     $order->update([
                         'payment_status' => 'paid',
                         'status' => $order->status === 'pending' ? 'processing' : $order->status,
                         'stripe_payment_intent_id' => $session->payment_intent ?? $order->stripe_payment_intent_id,
                     ]);
+
+                    // Guard against Stripe retrying the same webhook event —
+                    // only email the customer the first time this order is
+                    // marked paid, not on every retry/duplicate delivery.
+                    if (!$wasAlreadyPaid) {
+                        try {
+                            Mail::to($order->customer_email)->send(new OrderConfirmed($order));
+                        } catch (Throwable $e) {
+                            Log::error('Order confirmation email failed to send: ' . $e->getMessage(), ['exception' => $e]);
+                        }
+                    }
                 } else {
                     Log::error('Stripe webhook: order not found for checkout session ' . ($session->id ?? 'unknown'));
                 }

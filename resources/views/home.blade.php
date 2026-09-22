@@ -74,4 +74,6 @@
         @endforelse
     </div>
 </section>
+
+<x-recently-viewed />
 @endsection

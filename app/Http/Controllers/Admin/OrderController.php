@@ -3,10 +3,14 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Mail\OrderStatusUpdated;
 use App\Models\Order;
 use App\Services\OrderRefundService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use RuntimeException;
+use Throwable;
 
 class OrderController extends Controller
 {
@@ -44,6 +48,7 @@ class OrderController extends Controller
         ]);
 
         $data = $request->only('status', 'payment_status');
+        $previousStatus = $order->status;
 
         // Stamp delivered_at the first time an order is marked delivered —
         // this is what starts the customer's 7-day return window.
@@ -52,6 +57,14 @@ class OrderController extends Controller
         }
 
         $order->update($data);
+
+        if ($order->status !== $previousStatus) {
+            try {
+                Mail::to($order->customer_email)->send(new OrderStatusUpdated($order, $previousStatus));
+            } catch (Throwable $e) {
+                Log::error('Order status update email failed to send: ' . $e->getMessage(), ['exception' => $e]);
+            }
+        }
 
         return back()->with('success', 'Order updated.');
     }

@@ -60,9 +60,10 @@
             <a href="{{ route('static.contact') }}" class="{{ request()->routeIs('static.contact') ? 'text-blue-600' : 'text-gray-700' }} hover:text-blue-600">Contact</a>
         </nav>
 
-        <form action="{{ route('shop.index') }}" method="GET" class="hidden md:flex flex-1 max-w-sm">
-            <input type="text" name="search" value="{{ request('search') }}" placeholder="Search for products..." class="w-full border border-gray-200 rounded-l-full px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
+        <form action="{{ route('shop.index') }}" method="GET" class="hidden md:flex flex-1 max-w-sm relative" id="header-search-form" autocomplete="off">
+            <input type="text" name="search" value="{{ request('search') }}" placeholder="Search for products..." class="w-full border border-gray-200 rounded-l-full px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" id="header-search-input">
             <button class="bg-blue-600 text-white rounded-r-full px-4 flex items-center justify-center"><i data-lucide="search" class="w-4 h-4"></i></button>
+            <div id="header-search-suggestions" class="hidden absolute top-full left-0 right-0 mt-1 bg-white border rounded-xl shadow-lg overflow-hidden z-50"></div>
         </form>
 
         <div class="flex items-center gap-4">
@@ -189,8 +190,9 @@
         <div>
             <h4 class="text-white font-semibold mb-3">Newsletter</h4>
             <p class="text-sm text-gray-400 mb-2">Subscribe to get updates and offers.</p>
-            <form class="flex">
-                <input type="email" placeholder="Your email address" class="rounded-l-lg px-3 py-2 text-sm text-gray-800 w-full">
+            <form action="{{ route('newsletter.subscribe') }}" method="POST" class="flex">
+                @csrf
+                <input type="email" name="email" required placeholder="Your email address" class="rounded-l-lg px-3 py-2 text-sm text-gray-800 w-full">
                 <button type="submit" class="bg-blue-600 px-4 rounded-r-lg text-white text-sm whitespace-nowrap">Subscribe</button>
             </form>
         </div>
@@ -368,6 +370,47 @@
                 button.classList.remove('opacity-90');
             });
     };
+</script>
+
+<script>
+(function () {
+    var input = document.getElementById('header-search-input');
+    var box = document.getElementById('header-search-suggestions');
+    var form = document.getElementById('header-search-form');
+    if (!input || !box) return;
+
+    var debounceTimer = null;
+
+    function hide() { box.classList.add('hidden'); box.innerHTML = ''; }
+
+    function render(items) {
+        if (!items.length) { hide(); return; }
+        box.innerHTML = items.map(function (p) {
+            return '<a href="' + p.url + '" class="flex items-center gap-3 px-3 py-2 hover:bg-gray-50">' +
+                '<img src="' + p.image + '" class="w-10 h-10 object-contain rounded bg-gray-50" alt="">' +
+                '<span class="flex-1 text-sm text-gray-800 truncate">' + p.name + '</span>' +
+                '<span class="text-sm font-semibold text-blue-600">$' + p.price + '</span>' +
+                '</a>';
+        }).join('');
+        box.classList.remove('hidden');
+    }
+
+    input.addEventListener('input', function () {
+        var q = input.value.trim();
+        clearTimeout(debounceTimer);
+        if (q.length < 2) { hide(); return; }
+        debounceTimer = setTimeout(function () {
+            fetch('{{ route("shop.suggest") }}?q=' + encodeURIComponent(q))
+                .then(function (r) { return r.json(); })
+                .then(render)
+                .catch(hide);
+        }, 250);
+    });
+
+    document.addEventListener('click', function (e) {
+        if (form && !form.contains(e.target)) hide();
+    });
+})();
 </script>
 @stack('scripts')
 

@@ -21,6 +21,11 @@
             <span class="text-gray-400 text-xs line-through">${{ number_format($product->price, 2) }}</span>
         @endif
     </div>
+    @if($product->stock > 0 && $product->stock <= 5)
+        <p class="text-xs text-orange-600 font-medium mt-1 flex items-center gap-1">
+            <i data-lucide="flame" class="w-3 h-3"></i> Only {{ $product->stock }} left!
+        </p>
+    @endif
     <button type="button" onclick="window.addToCart({{ $product->id }}, 1, this)"
             class="mt-3 w-full bg-blue-600 text-white text-sm py-2 rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2 transition disabled:cursor-not-allowed">
         <i data-lucide="shopping-cart" class="w-4 h-4"></i> Add to Cart

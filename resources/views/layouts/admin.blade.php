@@ -41,6 +41,9 @@
         <a href="{{ route('admin.customers.index') }}" class="{{ $link(request()->routeIs('admin.customers.*'), 'admin.customers.index') }}">
             <i data-lucide="users" class="w-4 h-4"></i> Customers
         </a>
+        <a href="{{ route('admin.subscribers.index') }}" class="{{ $link(request()->routeIs('admin.subscribers.*'), 'admin.subscribers.index') }}">
+            <i data-lucide="mail" class="w-4 h-4"></i> Subscribers
+        </a>
         <a href="{{ route('home') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-800 text-gray-300 mt-4">
             <i data-lucide="external-link" class="w-4 h-4"></i> View Store
         </a>

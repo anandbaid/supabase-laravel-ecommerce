@@ -6,10 +6,12 @@ use App\Models\Address;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
+use App\Mail\OrderConfirmed;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Session;
 use Stripe\Checkout\Session as StripeCheckoutSession;
 use Stripe\Exception\ApiErrorException;
@@ -231,6 +233,15 @@ class CheckoutController extends Controller
         }
 
         Session::forget(['cart', 'coupon_code']);
+
+        // COD orders are confirmed immediately; card orders get their
+        // confirmation email from the Stripe webhook once payment actually
+        // succeeds, not here (the order isn't paid yet at this point).
+        try {
+            Mail::to($order->customer_email)->send(new OrderConfirmed($order));
+        } catch (Throwable $e) {
+            Log::error('Order confirmation email failed to send: ' . $e->getMessage(), ['exception' => $e]);
+        }
 
         return redirect()->route('checkout.success', $order->order_number);
     }

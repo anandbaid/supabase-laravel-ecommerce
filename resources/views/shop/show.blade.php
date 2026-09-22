@@ -297,5 +297,25 @@
 
         // ---- Wishlist (front-end only, same behaviour as product cards) ----
     })();
+
+    // Track this product view for the "Recently Viewed" strip.
+    window.__currentProductId = {{ $product->id }};
+    (function () {
+        var snapshot = {
+            id: {{ $product->id }},
+            name: @json($product->name),
+            url: @json(route('shop.show', $product->slug)),
+            image: @json($product->imageUrlSmall()),
+            price: '{{ number_format($product->finalPrice(), 2) }}',
+        };
+        try {
+            var list = JSON.parse(localStorage.getItem('recently_viewed') || '[]');
+            list = list.filter(function (p) { return p.id !== snapshot.id; });
+            list.unshift(snapshot);
+            localStorage.setItem('recently_viewed', JSON.stringify(list.slice(0, 10)));
+        } catch (e) { /* localStorage unavailable — safe to ignore */ }
+    })();
 </script>
+
+<x-recently-viewed />
 @endsection
