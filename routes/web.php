@@ -23,22 +23,13 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Artisan;
 
 
-Route::get('/system/clear-cache', function (\Illuminate\Http\Request $request) {
-    $expected = config('app.cache_clear_token');
- 
-    if (empty($expected) || !hash_equals((string) $expected, (string) $request->query('token'))) {
-        abort(403, 'Invalid or missing token.');
-    }
- 
-    $output = [];
-    foreach (['cache:clear', 'config:clear', 'route:clear', 'view:clear', 'clear-compiled'] as $command) {
-        Artisan::call($command);
-        $output[] = "$command: " . trim(Artisan::output());
-    }
- 
-    return response('<pre>' . e(implode("\n", $output)) . '</pre>');
-})->name('system.clear-cache');
-
+Route::get('/clear-cache', function () {
+    $exitCode = Artisan::call('config:clear');
+    $exitCode = Artisan::call('cache:clear');
+    $exitCode = Artisan::call('config:cache');
+    $exitCode = Artisan::call('queue:restart');
+    return 'DONE'; //Return anything
+});
 
 /*
 |--------------------------------------------------------------------------
