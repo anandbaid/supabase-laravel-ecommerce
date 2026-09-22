@@ -7,7 +7,7 @@
     <div class="relative max-w-7xl mx-auto px-4 py-14 md:py-16">
         <div class="max-w-xl">
             <h1 class="text-4xl md:text-5xl font-extrabold text-gray-900 mb-3">Our <span class="text-blue-600">Products</span></h1>
-            <p class="text-gray-600">Discover amazing products at the best prices. Shop your favorites and enjoy a better experience.</p>
+            <p class="text-gray-600">Discover amazing products at the best prices. <br>Shop your favorites and enjoy a better experience.</p>
         </div>
     </div>
 </section>
