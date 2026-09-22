@@ -27,7 +27,38 @@
 
         <nav class="hidden md:flex items-center gap-6 font-medium text-sm">
             <a href="{{ route('home') }}" class="{{ request()->routeIs('home') ? 'text-blue-600' : 'text-gray-700' }} hover:text-blue-600">Home</a>
-            <a href="{{ route('shop.index') }}" class="{{ request()->routeIs('shop.*') ? 'text-blue-600' : 'text-gray-700' }} hover:text-blue-600">Shop</a>
+            <a href="{{ route('shop.index') }}" class="{{ request()->routeIs('shop.*') && !request('deals') ? 'text-blue-600' : 'text-gray-700' }} hover:text-blue-600">Shop</a>
+
+            <div class="relative" data-categories-menu>
+                <button type="button" data-categories-trigger aria-haspopup="true" aria-expanded="false" class="flex items-center gap-1 text-gray-700 hover:text-blue-600">
+                    Categories <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
+                </button>
+                <div data-categories-panel class="hidden absolute left-0 top-full pt-3 z-20">
+                    <div class="bg-white border rounded-xl shadow-lg p-4 grid grid-cols-2 gap-x-8 gap-y-4 w-[420px]">
+                        @php $navCategories = \Illuminate\Support\Facades\Cache::remember('shop:categories:sidebar', 600, function () {
+                            return \App\Models\Category::where('is_active', true)->topLevel()->with(['children' => fn ($q) => $q->where('is_active', true)])->get();
+                        }); @endphp
+                        @forelse($navCategories as $navCat)
+                            <div>
+                                <a href="{{ route('shop.index', ['category' => $navCat->slug]) }}" class="font-semibold text-gray-800 hover:text-blue-600 text-sm">{{ $navCat->name }}</a>
+                                @if($navCat->children->isNotEmpty())
+                                    <ul class="mt-1.5 space-y-1">
+                                        @foreach($navCat->children as $child)
+                                            <li><a href="{{ route('shop.index', ['category' => $child->slug]) }}" class="text-gray-500 hover:text-blue-600 text-xs">{{ $child->name }}</a></li>
+                                        @endforeach
+                                    </ul>
+                                @endif
+                            </div>
+                        @empty
+                            <p class="text-sm text-gray-400 col-span-2">No categories yet.</p>
+                        @endforelse
+                    </div>
+                </div>
+            </div>
+
+            <a href="{{ route('shop.index', ['deals' => 1]) }}" class="{{ request('deals') ? 'text-blue-600' : 'text-gray-700' }} hover:text-blue-600">Deals</a>
+            <a href="{{ route('static.about') }}" class="{{ request()->routeIs('static.about') ? 'text-blue-600' : 'text-gray-700' }} hover:text-blue-600">About</a>
+            <a href="{{ route('static.contact') }}" class="{{ request()->routeIs('static.contact') ? 'text-blue-600' : 'text-gray-700' }} hover:text-blue-600">Contact</a>
         </nav>
 
         <form action="{{ route('shop.index') }}" method="GET" class="hidden md:flex flex-1 max-w-sm">
@@ -58,6 +89,9 @@
                                 </a>
                                 <a href="{{ route('addresses.index') }}" class="flex items-center gap-2 px-4 py-2 hover:bg-gray-50">
                                     <i data-lucide="map-pin" class="w-4 h-4"></i> My Addresses
+                                </a>
+                                <a href="{{ route('account.edit') }}" class="flex items-center gap-2 px-4 py-2 hover:bg-gray-50">
+                                    <i data-lucide="shield" class="w-4 h-4"></i> Privacy Settings
                                 </a>
                             @else
                                 <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-2 px-4 py-2 hover:bg-gray-50">
@@ -100,36 +134,80 @@
 </main>
 
 <footer class="bg-slate-900 text-gray-300 mt-16">
-    <div class="max-w-7xl mx-auto px-4 py-12 grid grid-cols-1 md:grid-cols-4 gap-8">
-        <div>
-            <div class="bg-white inline-block rounded-lg px-3 py-2 mb-2">
+    <div class="max-w-7xl mx-auto px-4 py-12 grid grid-cols-1 md:grid-cols-5 gap-8">
+        <div class="md:col-span-1">
+            <div class="bg-white inline-block rounded-lg px-3 py-2 mb-3">
                 <img src="{{ asset('images/logo.png') }}" alt="Let's Shop" class="h-7 w-auto">
             </div>
             <p class="text-sm text-gray-400">Better Products. Happier You.</p>
+            <div class="flex items-center gap-3 mt-4">
+                <a href="#" aria-label="Facebook" class="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center hover:bg-blue-600 transition"><i data-lucide="facebook" class="w-4 h-4"></i></a>
+                <a href="#" aria-label="Twitter" class="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center hover:bg-blue-600 transition"><i data-lucide="twitter" class="w-4 h-4"></i></a>
+                <a href="#" aria-label="Instagram" class="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center hover:bg-blue-600 transition"><i data-lucide="instagram" class="w-4 h-4"></i></a>
+                <a href="#" aria-label="LinkedIn" class="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center hover:bg-blue-600 transition"><i data-lucide="linkedin" class="w-4 h-4"></i></a>
+            </div>
         </div>
+
         <div>
             <h4 class="text-white font-semibold mb-3">Quick Links</h4>
             <ul class="text-sm space-y-2 text-gray-400">
                 <li><a href="{{ route('home') }}" class="hover:text-white">Home</a></li>
                 <li><a href="{{ route('shop.index') }}" class="hover:text-white">Shop</a></li>
+                <li><a href="{{ route('shop.index', ['deals' => 1]) }}" class="hover:text-white">Deals</a></li>
+                <li><a href="{{ route('static.about') }}" class="hover:text-white">About Us</a></li>
+                <li><a href="{{ route('static.contact') }}" class="hover:text-white">Contact</a></li>
             </ul>
         </div>
+
+        <div>
+            <h4 class="text-white font-semibold mb-3">Information</h4>
+            <ul class="text-sm space-y-2 text-gray-400">
+                <li><a href="{{ route('static.privacy') }}" class="hover:text-white">Privacy Policy</a></li>
+                <li><a href="{{ route('static.privacy') }}" class="hover:text-white">Terms &amp; Conditions</a></li>
+                <li><a href="{{ route('static.returns') }}" class="hover:text-white">Return Policy</a></li>
+                <li><a href="{{ route('static.returns') }}" class="hover:text-white">Shipping Policy</a></li>
+            </ul>
+        </div>
+
         <div>
             <h4 class="text-white font-semibold mb-3">Customer Service</h4>
             <ul class="text-sm space-y-2 text-gray-400">
-                <li>FAQs</li><li>Shipping Policy</li><li>Return Policy</li>
+                <li><a href="{{ route('static.contact') }}" class="hover:text-white">Help Center</a></li>
+                @auth
+                    @unless(auth()->user()->isAdmin())
+                        <li><a href="{{ route('account.orders.index') }}" class="hover:text-white">Track Order</a></li>
+                        <li><a href="{{ route('account.edit') }}" class="hover:text-white">My Account</a></li>
+                    @endunless
+                @else
+                    <li><a href="{{ route('login') }}" class="hover:text-white">Track Order</a></li>
+                    <li><a href="{{ route('login') }}" class="hover:text-white">My Account</a></li>
+                @endauth
+                <li><a href="{{ route('static.returns') }}" class="hover:text-white">Returns &amp; Refunds</a></li>
+                <li><a href="{{ route('static.contact') }}" class="hover:text-white">Support</a></li>
             </ul>
         </div>
+
         <div>
             <h4 class="text-white font-semibold mb-3">Newsletter</h4>
             <p class="text-sm text-gray-400 mb-2">Subscribe to get updates and offers.</p>
-            <div class="flex">
-                <input type="email" placeholder="Your email" class="rounded-l-lg px-3 py-2 text-sm text-gray-800 w-full">
-                <button class="bg-blue-600 px-4 rounded-r-lg text-white text-sm">Subscribe</button>
+            <form class="flex">
+                <input type="email" placeholder="Your email address" class="rounded-l-lg px-3 py-2 text-sm text-gray-800 w-full">
+                <button type="submit" class="bg-blue-600 px-4 rounded-r-lg text-white text-sm whitespace-nowrap">Subscribe</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="border-t border-gray-800">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <p class="text-xs text-gray-500">&copy; {{ date('Y') }} Let's Shop. All rights reserved.</p>
+            <div class="flex items-center gap-3 text-gray-500 text-xs font-semibold tracking-wide">
+                <span class="px-2 py-1 border border-gray-700 rounded">VISA</span>
+                <span class="px-2 py-1 border border-gray-700 rounded">Mastercard</span>
+                <span class="px-2 py-1 border border-gray-700 rounded">PayPal</span>
+                <span class="px-2 py-1 border border-gray-700 rounded">Stripe</span>
             </div>
         </div>
     </div>
-    <div class="text-center text-xs text-gray-500 border-t border-gray-800 py-4">&copy; {{ date('Y') }} Let's Shop. All rights reserved.</div>
 </footer>
 
 @include('partials.realtime')
@@ -143,6 +221,27 @@
         if (!wrap) return;
         var trigger = wrap.querySelector('[data-account-menu-trigger]');
         var panel = wrap.querySelector('[data-account-menu-panel]');
+
+        function close() {
+            panel.classList.add('hidden');
+            trigger.setAttribute('aria-expanded', 'false');
+        }
+        function toggle() {
+            var open = panel.classList.contains('hidden');
+            panel.classList.toggle('hidden', !open);
+            trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+        }
+        trigger.addEventListener('click', function (e) { e.stopPropagation(); toggle(); });
+        document.addEventListener('click', function (e) { if (!wrap.contains(e.target)) close(); });
+        document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+    })();
+
+    // Header categories menu — same click-to-toggle behavior as the account menu.
+    (function () {
+        var wrap = document.querySelector('[data-categories-menu]');
+        if (!wrap) return;
+        var trigger = wrap.querySelector('[data-categories-trigger]');
+        var panel = wrap.querySelector('[data-categories-panel]');
 
         function close() {
             panel.classList.add('hidden');

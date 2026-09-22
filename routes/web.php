@@ -17,6 +17,7 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\WishlistController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\ShopController;
+use App\Http\Controllers\StaticPageController;
 use App\Http\Controllers\StripeWebhookController;
 use Illuminate\Support\Facades\Route;
 
@@ -26,6 +27,12 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 Route::get('/', [HomeController::class, 'index'])->name('home');
+
+Route::get('/about', [StaticPageController::class, 'about'])->name('static.about');
+Route::get('/privacy-policy', [StaticPageController::class, 'privacy'])->name('static.privacy');
+Route::get('/return-policy', [StaticPageController::class, 'returns'])->name('static.returns');
+Route::get('/contact', [StaticPageController::class, 'contact'])->name('static.contact');
+Route::post('/contact', [StaticPageController::class, 'contactSubmit'])->name('static.contact.submit');
 
 Route::get('/shop', [ShopController::class, 'index'])->name('shop.index');
 Route::get('/shop/{product:slug}', [ShopController::class, 'show'])->name('shop.show');

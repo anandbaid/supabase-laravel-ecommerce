@@ -17,7 +17,15 @@ class ShopController extends Controller
         }
 
         if ($request->filled('category')) {
-            $query->whereHas('category', fn ($q) => $q->where('slug', $request->category));
+            $selected = Category::where('slug', $request->category)->first();
+            if ($selected) {
+                $categoryIds = $selected->isSubcategory() ? [$selected->id] : $selected->selfAndDescendantIds();
+                $query->whereIn('category_id', $categoryIds);
+            }
+        }
+
+        if ($request->boolean('deals')) {
+            $query->whereNotNull('discount_price');
         }
 
         if ($request->filled('min_price')) {
@@ -37,7 +45,11 @@ class ShopController extends Controller
         };
 
         $products = $query->paginate(12)->withQueryString();
-        $categories = Category::where('is_active', true)->get();
+        $categories = \Illuminate\Support\Facades\Cache::remember('shop:categories:sidebar', 600, function () {
+            return Category::where('is_active', true)->topLevel()->with(['children' => function ($q) {
+                $q->where('is_active', true);
+            }])->get();
+        });
 
         return view('shop.index', compact('products', 'categories'));
     }
