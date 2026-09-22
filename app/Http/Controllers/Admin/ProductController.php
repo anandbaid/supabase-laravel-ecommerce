@@ -18,7 +18,7 @@ class ProductController extends Controller
         $query = Product::with('category');
 
         if ($request->filled('search')) {
-            $query->where('name', 'like', '%' . $request->search . '%');
+            $query->where('name', 'ilike', '%' . $request->search . '%');
         }
 
         $products = $query->latest()->paginate(15)->withQueryString();

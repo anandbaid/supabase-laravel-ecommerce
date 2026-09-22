@@ -13,7 +13,7 @@ class ShopController extends Controller
         $query = Product::active()->with('category');
 
         if ($request->filled('search')) {
-            $query->where('name', 'like', '%' . $request->search . '%');
+            $query->where('name', 'ilike', '%' . $request->search . '%');
         }
 
         if ($request->filled('category')) {
@@ -66,7 +66,7 @@ class ShopController extends Controller
         }
 
         $products = Product::active()
-            ->where('name', 'like', '%' . $term . '%')
+            ->where('name', 'ilike', '%' . $term . '%')
             ->take(6)
             ->get(['id', 'name', 'slug', 'price', 'discount_price', 'image', 'image_small']);
 

@@ -24,8 +24,8 @@ class OrderController extends Controller
 
         if ($request->filled('search')) {
             $query->where(function ($q) use ($request) {
-                $q->where('order_number', 'like', '%' . $request->search . '%')
-                  ->orWhere('customer_name', 'like', '%' . $request->search . '%');
+                $q->where('order_number', 'ilike', '%' . $request->search . '%')
+                  ->orWhere('customer_name', 'ilike', '%' . $request->search . '%');
             });
         }
 
