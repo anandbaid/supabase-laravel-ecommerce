@@ -26,6 +26,9 @@
                         <div class="text-xs text-gray-500">{{ $order->created_at->format('d M Y, g:i A') }} &middot; {{ $order->items_count }} {{ \Illuminate\Support\Str::plural('item', $order->items_count) }}</div>
                     </div>
                     <span class="text-xs font-medium px-2.5 py-1 rounded-full {{ $order->statusColor() }}">{{ ucfirst($order->status) }}</span>
+                    @if($order->return_status)
+                        <span class="text-xs font-medium px-2.5 py-1 rounded-full {{ $order->returnStatusColor() }}">{{ $order->returnStatusLabel() }}</span>
+                    @endif
                     <span class="text-xs font-medium px-2.5 py-1 rounded-full {{ $order->paymentStatusColor() }}">
                         {{ $order->paymentStatusLabel() }}
                     </span>

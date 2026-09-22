@@ -103,6 +103,8 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/account/orders', [OrderController::class, 'index'])->name('account.orders.index');
     Route::get('/account/orders/{orderNumber}', [OrderController::class, 'show'])->name('account.orders.show');
+    Route::post('/account/orders/{orderNumber}/cancel', [OrderController::class, 'cancel'])->name('account.orders.cancel');
+    Route::post('/account/orders/{orderNumber}/return', [OrderController::class, 'requestReturn'])->name('account.orders.return');
 });
 
 /*
@@ -123,6 +125,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::get('orders', [AdminOrderController::class, 'index'])->name('orders.index');
     Route::get('orders/{order}', [AdminOrderController::class, 'show'])->name('orders.show');
     Route::patch('orders/{order}', [AdminOrderController::class, 'update'])->name('orders.update');
+    Route::post('orders/{order}/return/approve', [AdminOrderController::class, 'approveReturn'])->name('orders.return.approve');
+    Route::post('orders/{order}/return/reject', [AdminOrderController::class, 'rejectReturn'])->name('orders.return.reject');
+    Route::post('orders/{order}/refund', [AdminOrderController::class, 'refund'])->name('orders.refund');
 
     Route::get('customers', [AdminCustomerController::class, 'index'])->name('customers.index');
     Route::get('customers/create', [AdminCustomerController::class, 'create'])->name('customers.create');
