@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Services\OrderRefundService;
 use Illuminate\Http\Request;
+use RuntimeException;
 
 class OrderController extends Controller
 {
@@ -38,11 +40,85 @@ class OrderController extends Controller
     {
         $request->validate([
             'status' => 'required|in:pending,processing,shipped,delivered,cancelled',
-            'payment_status' => 'required|in:unpaid,paid,failed',
+            'payment_status' => 'required|in:unpaid,paid,failed,refunded',
         ]);
 
-        $order->update($request->only('status', 'payment_status'));
+        $data = $request->only('status', 'payment_status');
+
+        // Stamp delivered_at the first time an order is marked delivered —
+        // this is what starts the customer's 7-day return window.
+        if ($data['status'] === 'delivered' && !$order->delivered_at) {
+            $data['delivered_at'] = now();
+        }
+
+        $order->update($data);
 
         return back()->with('success', 'Order updated.');
+    }
+
+    /** Approve a pending return request — doesn't refund yet, just greenlights it. */
+    public function approveReturn(Order $order)
+    {
+        if ($order->return_status !== 'requested') {
+            return back()->with('error', 'This order has no pending return request.');
+        }
+
+        $order->update([
+            'return_status' => 'approved',
+            'return_decided_at' => now(),
+        ]);
+
+        return back()->with('success', 'Return approved. You can now process the refund once the item is received.');
+    }
+
+    public function rejectReturn(Order $order)
+    {
+        if ($order->return_status !== 'requested') {
+            return back()->with('error', 'This order has no pending return request.');
+        }
+
+        $order->update([
+            'return_status' => 'rejected',
+            'return_decided_at' => now(),
+        ]);
+
+        return back()->with('success', 'Return request rejected.');
+    }
+
+    /**
+     * Process the refund for an approved return (or any order, for manual
+     * ad-hoc refunds). Refunds via Stripe automatically for card payments;
+     * for Cash on Delivery orders there's nothing for Stripe to refund, so
+     * this just marks the order as refunded for your own records.
+     */
+    public function refund(Order $order, OrderRefundService $refunds)
+    {
+        if ($order->payment_status === 'refunded') {
+            return back()->with('error', 'This order has already been refunded.');
+        }
+
+        $wasStripePayment = $order->isRefundableViaStripe();
+
+        try {
+            $refunded = $refunds->refund($order);
+        } catch (RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        if (!$refunded) {
+            // Not a Stripe payment (e.g. COD) — nothing to call Stripe for,
+            // just record it as refunded manually.
+            $order->update([
+                'payment_status' => 'refunded',
+                'refund_amount' => $order->total,
+                'refunded_at' => now(),
+            ]);
+        }
+
+        if ($order->return_status === 'approved') {
+            $order->update(['return_status' => 'refunded']);
+        }
+
+        return back()->with('success', 'Refund recorded' . ($wasStripePayment ? ' and processed via Stripe.' : '.'));
     }
 }

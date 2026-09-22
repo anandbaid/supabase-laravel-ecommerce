@@ -1,124 +1,96 @@
 <?php
 
-namespace App\Http\Controllers\Admin;
+namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Services\OrderRefundService;
 use Illuminate\Http\Request;
 use RuntimeException;
 
+/** Customer-facing "My Orders" — order history for the logged-in user's own orders. */
 class OrderController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Order::query();
+        $orders = $request->user()->orders()
+            ->withCount('items')
+            ->latest()
+            ->paginate(8);
 
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
-
-        if ($request->filled('search')) {
-            $query->where(function ($q) use ($request) {
-                $q->where('order_number', 'like', '%' . $request->search . '%')
-                  ->orWhere('customer_name', 'like', '%' . $request->search . '%');
-            });
-        }
-
-        $orders = $query->latest()->paginate(15)->withQueryString();
-
-        return view('admin.orders.index', compact('orders'));
+        return view('account.orders.index', compact('orders'));
     }
 
-    public function show(Order $order)
+    public function show(Request $request, string $orderNumber)
     {
-        $order->load('items.product');
-        return view('admin.orders.show', compact('order'));
-    }
+        $order = Order::where('order_number', $orderNumber)
+            ->where('user_id', $request->user()->id)
+            ->with(['items', 'address'])
+            ->firstOrFail();
 
-    public function update(Request $request, Order $order)
-    {
-        $request->validate([
-            'status' => 'required|in:pending,processing,shipped,delivered,cancelled',
-            'payment_status' => 'required|in:unpaid,paid,failed,refunded',
-        ]);
-
-        $data = $request->only('status', 'payment_status');
-
-        // Stamp delivered_at the first time an order is marked delivered —
-        // this is what starts the customer's 7-day return window.
-        if ($data['status'] === 'delivered' && !$order->delivered_at) {
-            $data['delivered_at'] = now();
-        }
-
-        $order->update($data);
-
-        return back()->with('success', 'Order updated.');
-    }
-
-    /** Approve a pending return request — doesn't refund yet, just greenlights it. */
-    public function approveReturn(Order $order)
-    {
-        if ($order->return_status !== 'requested') {
-            return back()->with('error', 'This order has no pending return request.');
-        }
-
-        $order->update([
-            'return_status' => 'approved',
-            'return_decided_at' => now(),
-        ]);
-
-        return back()->with('success', 'Return approved. You can now process the refund once the item is received.');
-    }
-
-    public function rejectReturn(Order $order)
-    {
-        if ($order->return_status !== 'requested') {
-            return back()->with('error', 'This order has no pending return request.');
-        }
-
-        $order->update([
-            'return_status' => 'rejected',
-            'return_decided_at' => now(),
-        ]);
-
-        return back()->with('success', 'Return request rejected.');
+        return view('account.orders.show', compact('order'));
     }
 
     /**
-     * Process the refund for an approved return (or any order, for manual
-     * ad-hoc refunds). Refunds via Stripe automatically for card payments;
-     * for Cash on Delivery orders there's nothing for Stripe to refund, so
-     * this just marks the order as refunded for your own records.
+     * Customer-initiated cancellation — only allowed while the order hasn't
+     * shipped yet. If it was paid online, the payment is refunded via
+     * Stripe immediately as part of cancelling.
      */
-    public function refund(Order $order, OrderRefundService $refunds)
+    public function cancel(Request $request, string $orderNumber, OrderRefundService $refunds)
     {
-        if ($order->payment_status === 'refunded') {
-            return back()->with('error', 'This order has already been refunded.');
+        $order = Order::where('order_number', $orderNumber)
+            ->where('user_id', $request->user()->id)
+            ->firstOrFail();
+
+        if (!$order->canBeCancelled()) {
+            return back()->with('error', 'This order can no longer be cancelled — it has already shipped.');
         }
 
-        $wasStripePayment = $order->isRefundableViaStripe();
+        $data = $request->validate([
+            'reason' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $order->update([
+            'status' => 'cancelled',
+            'cancelled_at' => now(),
+            'cancellation_reason' => $data['reason'] ?? null,
+        ]);
 
         try {
-            $refunded = $refunds->refund($order);
+            $refunds->refund($order, 'requested_by_customer');
         } catch (RuntimeException $e) {
-            return back()->with('error', $e->getMessage());
+            // Order is cancelled either way; surface the refund issue separately
+            // so support can follow up rather than leaving the order stuck.
+            return back()->with('error', 'Your order was cancelled, but the automatic refund failed: ' . $e->getMessage());
         }
 
-        if (!$refunded) {
-            // Not a Stripe payment (e.g. COD) — nothing to call Stripe for,
-            // just record it as refunded manually.
-            $order->update([
-                'payment_status' => 'refunded',
-                'refund_amount' => $order->total,
-                'refunded_at' => now(),
-            ]);
+        return back()->with('success', 'Your order has been cancelled.' . ($order->fresh()->payment_status === 'refunded' ? ' Your payment has been refunded.' : ''));
+    }
+
+    /**
+     * Customer-initiated return request — only allowed within 7 days of
+     * delivery. Doesn't refund immediately; an admin reviews and approves
+     * it first (see Admin\OrderController::approveReturn).
+     */
+    public function requestReturn(Request $request, string $orderNumber)
+    {
+        $order = Order::where('order_number', $orderNumber)
+            ->where('user_id', $request->user()->id)
+            ->firstOrFail();
+
+        if (!$order->canRequestReturn()) {
+            return back()->with('error', 'This order is not eligible for a return. Returns must be requested within 7 days of delivery.');
         }
 
-        if ($order->return_status === 'approved') {
-            $order->update(['return_status' => 'refunded']);
-        }
+        $data = $request->validate([
+            'reason' => ['required', 'string', 'max:1000'],
+        ]);
 
-        return back()->with('success', 'Refund recorded' . ($wasStripePayment ? ' and processed via Stripe.' : '.'));
+        $order->update([
+            'return_status' => 'requested',
+            'return_reason' => $data['reason'],
+            'return_requested_at' => now(),
+        ]);
+
+        return back()->with('success', 'Your return request has been submitted. We\'ll review it and get back to you shortly.');
     }
 }
