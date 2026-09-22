@@ -52,6 +52,7 @@ class CategoryController extends Controller
 
         try {
             Category::create($data);
+            \Illuminate\Support\Facades\Cache::forget('shop:categories:sidebar:v2');
         } catch (Throwable $e) {
             Log::error('Category create failed: ' . $e->getMessage(), ['exception' => $e]);
             return back()->withInput()->with('error', 'Could not save the category. Please try again.');
@@ -105,6 +106,7 @@ class CategoryController extends Controller
 
         try {
             $category->update($data);
+            \Illuminate\Support\Facades\Cache::forget('shop:categories:sidebar:v2');
         } catch (Throwable $e) {
             Log::error('Category update failed: ' . $e->getMessage(), ['exception' => $e]);
             return back()->withInput()->with('error', 'Could not update the category. Please try again.');
@@ -119,6 +121,7 @@ class CategoryController extends Controller
 
         try {
             $category->delete();
+        \Illuminate\Support\Facades\Cache::forget('shop:categories:sidebar:v2');
         } catch (Throwable $e) {
             Log::error('Category delete failed: ' . $e->getMessage(), ['exception' => $e]);
             return back()->with('error', 'Could not delete the category. Please try again.');
