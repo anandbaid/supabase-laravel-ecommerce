@@ -120,8 +120,12 @@
                 </div>
             </form>
 
-            <button type="button" id="wishlist-toggle" aria-pressed="false" class="mt-3 w-full border border-gray-200 text-gray-600 hover:bg-gray-50 px-5 py-2.5 rounded-lg text-sm flex items-center justify-center gap-2">
-                <i data-lucide="heart" class="w-4 h-4"></i> <span>Add to Wishlist</span>
+            @php $inWishlist = $wishlistIds->contains($product->id); @endphp
+            <button type="button" data-wishlist-btn data-product-id="{{ $product->id }}" aria-pressed="{{ $inWishlist ? 'true' : 'false' }}"
+                    onclick="window.toggleWishlist({{ $product->id }}, this)"
+                    class="mt-3 w-full border px-5 py-2.5 rounded-lg text-sm flex items-center justify-center gap-2 transition {{ $inWishlist ? 'border-red-200 text-red-500' : 'border-gray-200 text-gray-600 hover:bg-gray-50' }}">
+                <i data-lucide="heart" class="w-4 h-4" fill="{{ $inWishlist ? 'currentColor' : 'none' }}"></i>
+                <span data-wishlist-label>{{ $inWishlist ? 'Saved to Wishlist' : 'Add to Wishlist' }}</span>
             </button>
         </div>
     </div>
@@ -283,18 +287,6 @@
         });
 
         // ---- Wishlist (front-end only, same behaviour as product cards) ----
-        var wish = document.getElementById('wishlist-toggle');
-        if (wish) {
-            wish.addEventListener('click', function () {
-                var on = wish.getAttribute('aria-pressed') !== 'true';
-                wish.setAttribute('aria-pressed', on ? 'true' : 'false');
-                wish.classList.toggle('text-red-500', on);
-                wish.classList.toggle('border-red-200', on);
-                wish.querySelector('span').textContent = on ? 'Saved to Wishlist' : 'Add to Wishlist';
-                var icon = wish.querySelector('svg, i');
-                if (icon) icon.setAttribute('fill', on ? 'currentColor' : 'none');
-            });
-        }
     })();
 </script>
 @endsection

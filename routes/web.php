@@ -13,6 +13,8 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\OrderController;
+use App\Http\Controllers\WishlistController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\ShopController;
 use App\Http\Controllers\StripeWebhookController;
@@ -37,6 +39,9 @@ Route::delete('/cart/{product}', [CartController::class, 'remove'])->name('cart.
 Route::delete('/cart', [CartController::class, 'clear'])->name('cart.clear');
 Route::post('/cart/coupon', [CartController::class, 'applyCoupon'])->name('cart.coupon.apply');
 Route::delete('/cart/coupon', [CartController::class, 'removeCoupon'])->name('cart.coupon.remove');
+
+// Wishlist toggle is called via fetch() from the heart button on any product card/page.
+Route::post('/wishlist/{product}/toggle', [WishlistController::class, 'toggle'])->name('wishlist.toggle');
 
 // Checkout requires a logged-in, non-admin (customer) account.
 Route::middleware('can-checkout')->group(function () {
@@ -76,6 +81,11 @@ Route::middleware('auth')->group(function () {
     Route::put('/account/addresses/{address}', [AddressController::class, 'update'])->name('addresses.update');
     Route::delete('/account/addresses/{address}', [AddressController::class, 'destroy'])->name('addresses.destroy');
     Route::post('/account/addresses/{address}/default', [AddressController::class, 'makeDefault'])->name('addresses.default');
+
+    Route::get('/account/wishlist', [WishlistController::class, 'index'])->name('wishlist.index');
+
+    Route::get('/account/orders', [OrderController::class, 'index'])->name('account.orders.index');
+    Route::get('/account/orders/{orderNumber}', [OrderController::class, 'show'])->name('account.orders.show');
 });
 
 /*

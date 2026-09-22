@@ -1,9 +1,13 @@
+@php $inWishlist = (isset($wishlistIds) ? $wishlistIds : collect())->contains($product->id); @endphp
 <div class="bg-white rounded-xl shadow-sm hover:shadow-md transition p-4 relative">
     @if($product->discountPercent())
         <span class="absolute top-3 left-3 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full z-10">-{{ $product->discountPercent() }}%</span>
     @endif
-    <button type="button" class="wishlist-btn absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-white/90 shadow flex items-center justify-center text-gray-400 hover:text-red-500 transition" title="Save to wishlist">
-        <i data-lucide="heart" class="w-4 h-4"></i>
+    <button type="button" data-wishlist-btn data-product-id="{{ $product->id }}" aria-pressed="{{ $inWishlist ? 'true' : 'false' }}"
+            onclick="window.toggleWishlist({{ $product->id }}, this)"
+            class="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-white/90 shadow flex items-center justify-center transition {{ $inWishlist ? 'text-red-500' : 'text-gray-400 hover:text-red-500' }}"
+            title="{{ $inWishlist ? 'Remove from wishlist' : 'Save to wishlist' }}">
+        <i data-lucide="heart" class="w-4 h-4" fill="{{ $inWishlist ? 'currentColor' : 'none' }}"></i>
     </button>
     <a href="{{ route('shop.show', $product->slug) }}">
         <div class="h-32 flex items-center justify-center mb-3">
@@ -24,18 +28,3 @@
         </button>
     </form>
 </div>
-
-<script>
-(function () {
-    document.querySelectorAll('.wishlist-btn').forEach(function (btn) {
-        if (btn.dataset.bound) return;
-        btn.dataset.bound = '1';
-        btn.addEventListener('click', function () {
-            var active = btn.classList.toggle('text-red-500');
-            var icon = btn.querySelector('i');
-            icon.setAttribute('fill', active ? 'currentColor' : 'none');
-        });
-    });
-    if (window.lucide) lucide.createIcons();
-})();
-</script>

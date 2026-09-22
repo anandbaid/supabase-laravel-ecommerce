@@ -58,4 +58,18 @@ class User extends Authenticatable
     {
         return $this->addresses()->where('is_default', true)->first() ?? $this->addresses()->first();
     }
+
+    public function wishlists()
+    {
+        return $this->hasMany(Wishlist::class);
+    }
+
+    /** @var \Illuminate\Support\Collection<int, int>|null */
+    protected ?\Illuminate\Support\Collection $wishlistIdsCache = null;
+
+    /** IDs of products this user has saved, memoised for the request. */
+    public function wishlistProductIds(): \Illuminate\Support\Collection
+    {
+        return $this->wishlistIdsCache ??= $this->wishlists()->pluck('product_id');
+    }
 }

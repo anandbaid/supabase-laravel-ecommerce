@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', "Let's Shop - Better Products. Happier You.")</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -40,6 +41,15 @@
                                 <a href="{{ route('account.edit') }}" class="flex items-center gap-2 px-4 py-2 hover:bg-gray-50">
                                     <i data-lucide="user-circle" class="w-4 h-4"></i> My Account
                                 </a>
+                                <a href="{{ route('account.orders.index') }}" class="flex items-center gap-2 px-4 py-2 hover:bg-gray-50">
+                                    <i data-lucide="package" class="w-4 h-4"></i> My Orders
+                                </a>
+                                <a href="{{ route('wishlist.index') }}" class="flex items-center gap-2 px-4 py-2 hover:bg-gray-50">
+                                    <i data-lucide="heart" class="w-4 h-4"></i> Wishlist
+                                    @if($wishlistIds->count())
+                                        <span class="ml-auto text-xs text-gray-400">{{ $wishlistIds->count() }}</span>
+                                    @endif
+                                </a>
                                 <a href="{{ route('addresses.index') }}" class="flex items-center gap-2 px-4 py-2 hover:bg-gray-50">
                                     <i data-lucide="map-pin" class="w-4 h-4"></i> My Addresses
                                 </a>
@@ -59,6 +69,14 @@
                 <a href="{{ route('login') }}" class="text-gray-700 hover:text-blue-600">
                     <i data-lucide="user" class="w-5 h-5"></i>
                 </a>
+            @endauth
+            @auth
+                @unless(auth()->user()->isAdmin())
+                    <a href="{{ route('wishlist.index') }}" class="relative text-gray-700 hover:text-red-500" aria-label="Wishlist">
+                        <i data-lucide="heart" class="w-6 h-6"></i>
+                        <span data-wishlist-count class="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center {{ $wishlistIds->count() ? '' : 'hidden' }}">{{ $wishlistIds->count() }}</span>
+                    </a>
+                @endunless
             @endauth
             <a href="{{ route('cart.index') }}" class="relative text-gray-700 hover:text-blue-600">
                 <i data-lucide="shopping-cart" class="w-6 h-6"></i>
@@ -135,6 +153,48 @@
         document.addEventListener('click', function (e) { if (!wrap.contains(e.target)) close(); });
         document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
     })();
+
+    // Shared AJAX wishlist toggle. Any button anywhere on the page can call
+    // window.toggleWishlist(productId, button) — used by product cards and
+    // the product detail page. Keeps every heart for that product in sync
+    // and updates the header count badge.
+    window.toggleWishlist = function (productId, button) {
+        if (button) button.disabled = true;
+        var token = document.querySelector('meta[name="csrf-token"]').content;
+
+        fetch('/wishlist/' + productId + '/toggle', {
+            method: 'POST',
+            headers: { 'X-CSRF-TOKEN': token, 'Accept': 'application/json', 'Content-Type': 'application/json' },
+        })
+            .then(function (res) { return res.json().then(function (data) { return { ok: res.ok, data: data }; }); })
+            .then(function (result) {
+                if (!result.ok) {
+                    if (result.data.redirect) { window.location.href = result.data.redirect; return; }
+                    window.showToast(result.data.message || 'Something went wrong.', 'error');
+                    return;
+                }
+
+                document.querySelectorAll('[data-wishlist-btn][data-product-id="' + productId + '"]').forEach(function (btn) {
+                    btn.classList.toggle('text-red-500', result.data.wishlisted);
+                    btn.classList.toggle('text-gray-400', !result.data.wishlisted);
+                    btn.setAttribute('aria-pressed', result.data.wishlisted ? 'true' : 'false');
+                    var icon = btn.querySelector('i, svg');
+                    if (icon) icon.setAttribute('fill', result.data.wishlisted ? 'currentColor' : 'none');
+                    var label = btn.querySelector('[data-wishlist-label]');
+                    if (label) label.textContent = result.data.wishlisted ? 'Saved to Wishlist' : 'Add to Wishlist';
+                });
+
+                var badge = document.querySelector('[data-wishlist-count]');
+                if (badge) {
+                    badge.textContent = result.data.count;
+                    badge.classList.toggle('hidden', result.data.count < 1);
+                }
+
+                window.showToast(result.data.message, result.data.wishlisted ? 'success' : 'info', 3000);
+            })
+            .catch(function () { window.showToast('Could not update your wishlist. Please try again.', 'error'); })
+            .finally(function () { if (button) button.disabled = false; });
+    };
 </script>
 @stack('scripts')
 
