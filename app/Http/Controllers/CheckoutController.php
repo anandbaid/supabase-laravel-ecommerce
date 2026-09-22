@@ -127,7 +127,48 @@ class CheckoutController extends Controller
         }
 
         try {
-            $order = DB::transaction(function () use ($request, $cart, $products, $summary, $address, $customerName, $billingText, $shippingText) {
+            $order = DB::transaction(function () use ($request, $cart, $products, $summary, $address, $customerName, $billingText, $shippingText, $same) {
+                $userId = $request->user()->id;
+                $hadNoAddresses = ! Address::where('user_id', $userId)->exists();
+
+                // Remember this billing address on the account, so next time the
+                // customer checks out these fields are pre-filled instead of blank.
+                // Matched on street + postcode, so re-using the same address updates
+                // it in place rather than piling up duplicates.
+                $billingAddress = Address::updateOrCreate(
+                    ['user_id' => $userId, 'line1' => $request->billing_line1, 'postal_code' => $request->billing_postal_code],
+                    [
+                        'label' => 'Billing',
+                        'full_name' => $customerName,
+                        'phone' => $request->customer_phone,
+                        'line2' => $request->billing_line2,
+                        'city' => $request->billing_city,
+                        'state' => $request->billing_state,
+                        'country' => $request->billing_country,
+                    ]
+                );
+                if ($hadNoAddresses) {
+                    $billingAddress->update(['is_default' => true]);
+                }
+
+                // A hand-typed shipping address (not "same as billing" and not
+                // picked from the saved list) gets saved too, so it also shows up
+                // as a choice next time.
+                if (! $same && ! $address) {
+                    Address::updateOrCreate(
+                        ['user_id' => $userId, 'line1' => $request->shipping_line1, 'postal_code' => $request->shipping_postal_code],
+                        [
+                            'label' => 'Shipping',
+                            'full_name' => trim($request->shipping_first_name . ' ' . $request->shipping_last_name),
+                            'phone' => $request->shipping_phone,
+                            'line2' => $request->shipping_line2,
+                            'city' => $request->shipping_city,
+                            'state' => $request->shipping_state,
+                            'country' => $request->shipping_country,
+                        ]
+                    );
+                }
+
                 $coupon = $summary['coupon'];
 
                 $order = Order::create([
