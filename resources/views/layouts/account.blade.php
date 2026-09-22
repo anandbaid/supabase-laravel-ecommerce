@@ -6,7 +6,7 @@
     <h1 class="text-2xl font-bold mb-6">My Account</h1>
 
     <div class="grid md:grid-cols-[220px_1fr] gap-6 items-start">
-        @include('account._sidebar')
+        @include('account.sidebar')
 
         <div>
             @yield('account-content')
