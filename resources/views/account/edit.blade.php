@@ -1,19 +1,10 @@
-@extends('layouts.app')
-@section('title', "My Account - Let's Shop")
+@extends('layouts.account')
 
-@section('content')
-<div class="max-w-2xl mx-auto px-4 py-10">
-    <div class="flex items-center justify-between gap-2 mb-6">
-        <div class="flex items-center gap-2">
-            <i data-lucide="user-circle" class="w-6 h-6 text-blue-600"></i>
-            <h1 class="text-2xl font-bold">My Account</h1>
-        </div>
-        <a href="{{ route('addresses.index') }}" class="inline-flex items-center gap-1.5 text-sm text-blue-600 border border-blue-200 rounded-lg px-3 py-1.5 hover:bg-blue-50">
-            <i data-lucide="map-pin" class="w-4 h-4"></i> My Addresses
-        </a>
-    </div>
-
+@section('account-content')
     <div class="bg-white rounded-xl shadow-sm p-6">
+        <h2 class="font-bold text-slate-900 mb-5 flex items-center gap-2">
+            <i data-lucide="user-circle" class="w-5 h-5 text-blue-600"></i> Account Details
+        </h2>
         <form action="{{ route('account.update') }}" method="POST" class="space-y-5">
             @csrf
             @method('PATCH')
@@ -72,5 +63,4 @@
             </div>
         </form>
     </div>
-</div>
 @endsection

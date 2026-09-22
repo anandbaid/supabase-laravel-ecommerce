@@ -19,9 +19,15 @@ use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\ShopController;
 use App\Http\Controllers\StaticPageController;
 use App\Http\Controllers\StripeWebhookController;
-use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Route;
 
+/*
+|--------------------------------------------------------------------------
+| Storefront
+|--------------------------------------------------------------------------
+*/
+Route::get('/', [HomeController::class, 'index'])->name('home');
 
 Route::get('/clear-cache', function () {
     $exitCode = Artisan::call('config:clear');
@@ -30,13 +36,6 @@ Route::get('/clear-cache', function () {
     $exitCode = Artisan::call('queue:restart');
     return 'DONE'; //Return anything
 });
-
-/*
-|--------------------------------------------------------------------------
-| Storefront
-|--------------------------------------------------------------------------
-*/
-Route::get('/', [HomeController::class, 'index'])->name('home');
 
 Route::get('/about', [StaticPageController::class, 'about'])->name('static.about');
 Route::get('/privacy-policy', [StaticPageController::class, 'privacy'])->name('static.privacy');
@@ -88,6 +87,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/shop/{product:slug}/reviews', [ReviewController::class, 'store'])->name('reviews.store');
     Route::delete('/reviews/{review}', [ReviewController::class, 'destroy'])->name('reviews.destroy');
 
+    Route::get('/account/dashboard', [AccountController::class, 'dashboard'])->name('account.dashboard');
     Route::get('/account', [AccountController::class, 'edit'])->name('account.edit');
     Route::patch('/account', [AccountController::class, 'update'])->name('account.update');
 

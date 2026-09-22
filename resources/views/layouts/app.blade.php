@@ -74,7 +74,7 @@
                     <div data-account-menu-panel class="hidden absolute right-0 top-full pt-2 w-44 z-20">
                         <div class="bg-white border rounded-lg shadow-lg py-1 text-sm">
                             @unless(auth()->user()->isAdmin())
-                                <a href="{{ route('account.edit') }}" class="flex items-center gap-2 px-4 py-2 hover:bg-gray-50">
+                                <a href="{{ route('account.dashboard') }}" class="flex items-center gap-2 px-4 py-2 hover:bg-gray-50">
                                     <i data-lucide="user-circle" class="w-4 h-4"></i> My Account
                                 </a>
                                 <a href="{{ route('account.orders.index') }}" class="flex items-center gap-2 px-4 py-2 hover:bg-gray-50">
@@ -175,7 +175,7 @@
                 @auth
                     @unless(auth()->user()->isAdmin())
                         <li><a href="{{ route('account.orders.index') }}" class="hover:text-white">Track Order</a></li>
-                        <li><a href="{{ route('account.edit') }}" class="hover:text-white">My Account</a></li>
+                        <li><a href="{{ route('account.dashboard') }}" class="hover:text-white">My Account</a></li>
                     @endunless
                 @else
                     <li><a href="{{ route('login') }}" class="hover:text-white">Track Order</a></li>

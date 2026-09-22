@@ -1,8 +1,6 @@
-@extends('layouts.app')
-@section('title', "My Orders - Let's Shop")
+@extends('layouts.account')
 
-@section('content')
-<div class="max-w-5xl mx-auto px-4 py-10">
+@section('account-content')
     <div class="flex items-center gap-3 mb-6">
         <div class="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center"><i data-lucide="package" class="w-6 h-6"></i></div>
         <div>
@@ -38,5 +36,4 @@
         </div>
         <div class="mt-6">{{ $orders->links() }}</div>
     @endif
-</div>
 @endsection

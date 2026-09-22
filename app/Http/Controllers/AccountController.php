@@ -15,6 +15,20 @@ class AccountController extends Controller
     {
     }
 
+    public function dashboard(Request $request)
+    {
+        $user = $request->user();
+
+        $ordersCount = $user->orders()->count();
+        $wishlistCount = $user->wishlists()->count();
+        // Simple placeholder scheme — swap in real loyalty logic whenever you have it.
+        $loyaltyPoints = $ordersCount * 50;
+
+        $recentOrders = $user->orders()->with('items.product')->latest()->take(3)->get();
+
+        return view('account.dashboard', compact('user', 'ordersCount', 'wishlistCount', 'loyaltyPoints', 'recentOrders'));
+    }
+
     public function edit(Request $request)
     {
         return view('account.edit', ['user' => $request->user()]);
