@@ -60,7 +60,7 @@ class StripeWebhookController extends Controller
                     : Order::where('stripe_checkout_session_id', $session->id)->first();
 
                 if ($order) {
-                    $order->update(['payment_status' => 'unpaid']);
+                    $order->update(['payment_status' => 'failed']);
                 }
             }
         } catch (Throwable $e) {

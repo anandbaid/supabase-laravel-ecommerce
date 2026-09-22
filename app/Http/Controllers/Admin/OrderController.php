@@ -38,7 +38,7 @@ class OrderController extends Controller
     {
         $request->validate([
             'status' => 'required|in:pending,processing,shipped,delivered,cancelled',
-            'payment_status' => 'required|in:unpaid,paid',
+            'payment_status' => 'required|in:unpaid,paid,failed',
         ]);
 
         $order->update($request->only('status', 'payment_status'));

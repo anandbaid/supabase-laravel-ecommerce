@@ -34,7 +34,7 @@
                     <td class="px-4 py-3">{{ $order->customer_name }}</td>
                     <td class="px-4 py-3">${{ number_format($order->total, 2) }}</td>
                     <td class="px-4 py-3">
-                        <span class="px-2 py-1 rounded-full text-xs {{ $order->payment_status == 'paid' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700' }}" data-payment-status-for="{{ $order->order_number }}">{{ ucfirst($order->payment_status) }}</span>
+                        <span class="px-2 py-1 rounded-full text-xs {{ $order->paymentStatusColor() }}" data-payment-status-for="{{ $order->order_number }}">{{ $order->paymentStatusLabel() }}</span>
                     </td>
                     <td class="px-4 py-3"><span class="px-2 py-1 rounded-full text-xs {{ $order->statusColor() }}" data-order-status-for="{{ $order->order_number }}">{{ ucfirst($order->status) }}</span></td>
                     <td class="px-4 py-3 text-gray-500">{{ $order->created_at->format('M d, Y') }}</td>

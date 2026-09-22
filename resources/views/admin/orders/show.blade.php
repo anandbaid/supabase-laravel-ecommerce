@@ -68,6 +68,7 @@
                 <select name="payment_status" class="w-full border rounded-lg px-3 py-2 mt-1 text-sm">
                     <option value="unpaid" @selected($order->payment_status == 'unpaid')>Unpaid</option>
                     <option value="paid" @selected($order->payment_status == 'paid')>Paid</option>
+                    <option value="failed" @selected($order->payment_status == 'failed')>Failed</option>
                 </select>
             </div>
             <button class="w-full bg-blue-600 text-white py-2.5 rounded-lg font-medium">Update Order</button>

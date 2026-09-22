@@ -9,14 +9,18 @@
 
     <div class="flex items-center justify-center gap-3 mb-6 text-sm">
         <span class="px-3 py-1 rounded-full {{ $order->statusColor() }}" data-order-status-for="{{ $order->order_number }}">{{ ucfirst($order->status) }}</span>
-        <span class="px-3 py-1 rounded-full {{ $order->payment_status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700' }}" data-payment-status-for="{{ $order->order_number }}">
-            {{ $order->payment_status === 'paid' ? 'Paid' : 'Payment pending' }}
+        <span class="px-3 py-1 rounded-full {{ $order->paymentStatusColor() }}" data-payment-status-for="{{ $order->order_number }}">
+            {{ $order->paymentStatusLabel() }}
         </span>
     </div>
 
-    @if($order->payment_method === 'card' && $order->payment_status !== 'paid')
+    @if($order->payment_method === 'card' && $order->payment_status === 'unpaid')
         <div class="bg-yellow-50 border border-yellow-200 text-yellow-800 text-sm rounded-lg px-4 py-3 mb-6 text-left">
             We're still confirming your payment with Stripe. This page will update automatically once it's confirmed — no need to refresh.
+        </div>
+    @elseif($order->payment_method === 'card' && $order->payment_status === 'failed')
+        <div class="bg-red-50 border border-red-200 text-red-800 text-sm rounded-lg px-4 py-3 mb-6 text-left">
+            Your payment didn't go through. Your order has been recorded, but nothing has been charged — please contact us or try checking out again.
         </div>
     @endif
 

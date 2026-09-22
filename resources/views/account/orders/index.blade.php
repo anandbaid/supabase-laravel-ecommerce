@@ -28,8 +28,8 @@
                         <div class="text-xs text-gray-500">{{ $order->created_at->format('d M Y, g:i A') }} &middot; {{ $order->items_count }} {{ \Illuminate\Support\Str::plural('item', $order->items_count) }}</div>
                     </div>
                     <span class="text-xs font-medium px-2.5 py-1 rounded-full {{ $order->statusColor() }}">{{ ucfirst($order->status) }}</span>
-                    <span class="text-xs font-medium px-2.5 py-1 rounded-full {{ $order->payment_status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700' }}">
-                        {{ $order->payment_status === 'paid' ? 'Paid' : 'Payment pending' }}
+                    <span class="text-xs font-medium px-2.5 py-1 rounded-full {{ $order->paymentStatusColor() }}">
+                        {{ $order->paymentStatusLabel() }}
                     </span>
                     <div class="font-bold text-slate-900 w-20 text-right">${{ number_format($order->total, 2) }}</div>
                     <i data-lucide="chevron-right" class="w-4 h-4 text-gray-300"></i>

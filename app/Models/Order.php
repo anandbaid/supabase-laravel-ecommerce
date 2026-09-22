@@ -52,4 +52,22 @@ class Order extends Model
             default => 'bg-gray-100 text-gray-700',
         };
     }
+
+    public function paymentStatusLabel(): string
+    {
+        return match ($this->payment_status) {
+            'paid' => 'Paid',
+            'failed' => 'Failed',
+            default => 'Payment pending',
+        };
+    }
+
+    public function paymentStatusColor(): string
+    {
+        return match ($this->payment_status) {
+            'paid' => 'bg-green-100 text-green-700',
+            'failed' => 'bg-red-100 text-red-700',
+            default => 'bg-yellow-100 text-yellow-700',
+        };
+    }
 }
