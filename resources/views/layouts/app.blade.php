@@ -9,7 +9,13 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@0.474.0/dist/umd/lucide.js"></script>
-    <style>body{font-family:'Poppins',sans-serif}</style>
+    <style>
+        body{font-family:'Poppins',sans-serif}
+        @keyframes wishlistPop{0%{transform:scale(1)}35%{transform:scale(1.35)}60%{transform:scale(0.9)}100%{transform:scale(1)}}
+        .wishlist-pop{animation:wishlistPop 0.4s ease}
+        @keyframes cartBump{0%{transform:scale(1)}40%{transform:scale(1.4)}100%{transform:scale(1)}}
+        .cart-bump{animation:cartBump 0.35s ease}
+    </style>
 </head>
 <body class="bg-gray-50 text-gray-800">
 
@@ -78,12 +84,10 @@
                     </a>
                 @endunless
             @endauth
-            <a href="{{ route('cart.index') }}" class="relative text-gray-700 hover:text-blue-600">
+            <a href="{{ route('cart.index') }}" class="relative text-gray-700 hover:text-blue-600" aria-label="Cart">
                 <i data-lucide="shopping-cart" class="w-6 h-6"></i>
                 @php $cartCount = array_sum(session('cart', [])); @endphp
-                @if($cartCount > 0)
-                    <span class="absolute -top-2 -right-2 bg-blue-600 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">{{ $cartCount }}</span>
-                @endif
+                <span data-cart-count class="absolute -top-2 -right-2 bg-blue-600 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center {{ $cartCount > 0 ? '' : 'hidden' }}">{{ $cartCount }}</span>
             </a>
         </div>
     </div>
@@ -191,9 +195,80 @@
                 }
 
                 window.showToast(result.data.message, result.data.wishlisted ? 'success' : 'info', 3000);
+
+                // A quick pop so the heart feels responsive, not just a color swap.
+                document.querySelectorAll('[data-wishlist-btn][data-product-id="' + productId + '"] i, [data-wishlist-btn][data-product-id="' + productId + '"] svg').forEach(function (icon) {
+                    icon.classList.remove('wishlist-pop');
+                    void icon.offsetWidth; // restart the animation if clicked again quickly
+                    icon.classList.add('wishlist-pop');
+                });
             })
             .catch(function () { window.showToast('Could not update your wishlist. Please try again.', 'error'); })
             .finally(function () { if (button) button.disabled = false; });
+    };
+
+    // Shared AJAX add-to-cart. Call window.addToCart(productId, qty, button)
+    // from any "Add to Cart" button — used by product cards and the product
+    // page. Walks the button through idle -> adding -> added states so the
+    // customer sees the action register, then updates the header cart badge.
+    window.addToCart = function (productId, qty, button) {
+        if (!button || button.dataset.state === 'busy') return;
+
+        var original = button.innerHTML;
+        button.dataset.state = 'busy';
+        button.disabled = true;
+        button.classList.add('opacity-90');
+        button.innerHTML = '<svg class="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg> Adding…';
+
+        var token = document.querySelector('meta[name="csrf-token"]').content;
+
+        fetch('/cart/' + productId + '/add', {
+            method: 'POST',
+            headers: { 'X-CSRF-TOKEN': token, 'Accept': 'application/json', 'Content-Type': 'application/json' },
+            body: JSON.stringify({ qty: qty || 1 }),
+        })
+            .then(function (res) { return res.json().then(function (data) { return { ok: res.ok, data: data }; }); })
+            .then(function (result) {
+                if (!result.ok) {
+                    window.showToast(result.data.message || 'Could not add that to your cart.', 'error');
+                    button.innerHTML = original;
+                    button.dataset.state = 'idle';
+                    button.disabled = false;
+                    button.classList.remove('opacity-90');
+                    return;
+                }
+
+                var badge = document.querySelector('[data-cart-count]');
+                if (badge) {
+                    badge.textContent = result.data.cartCount;
+                    badge.classList.remove('hidden');
+                    badge.classList.remove('cart-bump');
+                    void badge.offsetWidth;
+                    badge.classList.add('cart-bump');
+                }
+
+                button.classList.remove('opacity-90');
+                button.classList.add('bg-green-600', 'hover:bg-green-600', 'border-green-600', 'text-white');
+                button.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i> Added';
+                if (window.lucide) lucide.createIcons();
+
+                window.showToast(result.data.message, result.data.capped ? 'info' : 'success', 2500);
+
+                setTimeout(function () {
+                    button.innerHTML = original;
+                    button.dataset.state = 'idle';
+                    button.disabled = false;
+                    button.classList.remove('bg-green-600', 'hover:bg-green-600', 'border-green-600', 'text-white');
+                    if (window.lucide) lucide.createIcons();
+                }, 1400);
+            })
+            .catch(function () {
+                window.showToast('Could not add that to your cart. Please try again.', 'error');
+                button.innerHTML = original;
+                button.dataset.state = 'idle';
+                button.disabled = false;
+                button.classList.remove('opacity-90');
+            });
     };
 </script>
 @stack('scripts')

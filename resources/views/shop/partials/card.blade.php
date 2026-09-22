@@ -21,10 +21,8 @@
             <span class="text-gray-400 text-xs line-through">${{ number_format($product->price, 2) }}</span>
         @endif
     </div>
-    <form action="{{ route('cart.add', $product) }}" method="POST" class="mt-3">
-        @csrf
-        <button class="w-full bg-blue-600 text-white text-sm py-2 rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2">
-            <i data-lucide="shopping-cart" class="w-4 h-4"></i> Add to Cart
-        </button>
-    </form>
+    <button type="button" onclick="window.addToCart({{ $product->id }}, 1, this)"
+            class="mt-3 w-full bg-blue-600 text-white text-sm py-2 rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2 transition disabled:cursor-not-allowed">
+        <i data-lucide="shopping-cart" class="w-4 h-4"></i> Add to Cart
+    </button>
 </div>

@@ -98,27 +98,32 @@
                 <span class="text-gray-400 ml-2">SKU: {{ $product->sku }}</span>
             </p>
 
-            <form action="{{ route('cart.add', $product) }}" method="POST" class="mt-5">
-                @csrf
+            <div class="mt-5">
                 <label for="qty-input" class="text-sm font-medium text-gray-700 block mb-2">Quantity</label>
                 <div class="flex items-center gap-3 mb-5">
                     <div class="inline-flex items-center border border-gray-200 rounded-lg overflow-hidden">
                         <button type="button" data-qty-step="-1" aria-label="Decrease quantity" class="w-10 h-10 flex items-center justify-center text-gray-600 hover:bg-gray-50"><i data-lucide="minus" class="w-4 h-4"></i></button>
-                        <input id="qty-input" type="number" name="qty" value="1" min="1" max="{{ $maxQty }}" class="w-14 h-10 text-center border-0 border-x border-gray-200 text-sm focus:ring-0 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none">
+                        <input id="qty-input" type="number" value="1" min="1" max="{{ $maxQty }}" class="w-14 h-10 text-center border-0 border-x border-gray-200 text-sm focus:ring-0 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none">
                         <button type="button" data-qty-step="1" aria-label="Increase quantity" class="w-10 h-10 flex items-center justify-center text-gray-600 hover:bg-gray-50"><i data-lucide="plus" class="w-4 h-4"></i></button>
                     </div>
                     <span class="text-xs text-gray-400">(Max {{ $maxQty }})</span>
                 </div>
 
                 <div class="grid grid-cols-2 gap-3">
-                    <button {{ $inStock ? '' : 'disabled' }} class="border border-blue-600 text-blue-600 hover:bg-blue-50 disabled:border-gray-200 disabled:text-gray-400 disabled:hover:bg-transparent px-5 py-3 rounded-lg font-medium flex items-center justify-center gap-2">
+                    <button type="button" {{ $inStock ? '' : 'disabled' }}
+                            onclick="window.addToCart({{ $product->id }}, parseInt(document.getElementById('qty-input').value, 10) || 1, this)"
+                            class="border border-blue-600 text-blue-600 hover:bg-blue-50 disabled:border-gray-200 disabled:text-gray-400 disabled:hover:bg-transparent px-5 py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition disabled:cursor-not-allowed">
                         <i data-lucide="shopping-cart" class="w-4 h-4"></i> Add to Cart
                     </button>
-                    <button formaction="{{ route('cart.buy-now', $product) }}" {{ $inStock ? '' : 'disabled' }} class="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400 text-white px-5 py-3 rounded-lg font-medium flex items-center justify-center gap-2">
-                        <i data-lucide="zap" class="w-4 h-4"></i> Buy Now
-                    </button>
+                    <form action="{{ route('cart.buy-now', $product) }}" method="POST">
+                        @csrf
+                        <input type="hidden" name="qty" id="buy-now-qty" value="1">
+                        <button {{ $inStock ? '' : 'disabled' }} class="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400 text-white px-5 py-3 rounded-lg font-medium flex items-center justify-center gap-2">
+                            <i data-lucide="zap" class="w-4 h-4"></i> Buy Now
+                        </button>
+                    </form>
                 </div>
-            </form>
+            </div>
 
             @php $inWishlist = $wishlistIds->contains($product->id); @endphp
             <button type="button" data-wishlist-btn data-product-id="{{ $product->id }}" aria-pressed="{{ $inWishlist ? 'true' : 'false' }}"
@@ -261,11 +266,15 @@
 
         // ---- Quantity stepper ---------------------------------------------
         var qty = document.getElementById('qty-input');
+        var buyNowQty = document.getElementById('buy-now-qty');
+        var syncBuyNowQty = function () { if (buyNowQty) buyNowQty.value = qty.value; };
+        if (qty) { qty.addEventListener('input', syncBuyNowQty); qty.addEventListener('change', syncBuyNowQty); }
         document.querySelectorAll('[data-qty-step]').forEach(function (btn) {
             btn.addEventListener('click', function () {
                 var min = parseInt(qty.min, 10) || 1, max = parseInt(qty.max, 10) || 1;
                 var next = (parseInt(qty.value, 10) || 1) + parseInt(btn.dataset.qtyStep, 10);
                 qty.value = Math.min(max, Math.max(min, next));
+                syncBuyNowQty();
             });
         });
 

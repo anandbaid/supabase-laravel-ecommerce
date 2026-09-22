@@ -127,7 +127,10 @@ class CartController extends Controller
     {
         $max = $this->maxQty($product);
         if ($max < 1) {
-            return back()->with('error', $product->name . ' is out of stock.');
+            $message = $product->name . ' is out of stock.';
+            return $request->wantsJson()
+                ? response()->json(['message' => $message], 422)
+                : back()->with('error', $message);
         }
 
         $qty = max(1, (int) $request->input('qty', 1));
@@ -136,11 +139,21 @@ class CartController extends Controller
         $cart[$product->id] = min($newQty, $max);
         Session::put('cart', $cart);
 
-        if ($newQty > $max) {
-            return back()->with('info', "You can buy up to {$max} of {$product->name}. Your cart has been set to {$max}.");
+        $capped = $newQty > $max;
+        $message = $capped
+            ? "You can buy up to {$max} of {$product->name}. Your cart has been set to {$max}."
+            : $product->name . ' added to cart.';
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'message' => $message,
+                'capped' => $capped,
+                'cartCount' => array_sum($this->cart()),
+                'qtyInCart' => $cart[$product->id],
+            ]);
         }
 
-        return back()->with('success', $product->name . ' added to cart.');
+        return $capped ? back()->with('info', $message) : back()->with('success', $message);
     }
 
     /**
