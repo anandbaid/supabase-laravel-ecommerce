@@ -45,11 +45,9 @@ class ShopController extends Controller
         };
 
         $products = $query->paginate(12)->withQueryString();
-        $categories = \Illuminate\Support\Facades\Cache::remember('shop:categories:sidebar:v2', 600, function () {
-            return Category::where('is_active', true)->topLevel()->with(['children' => function ($q) {
-                $q->where('is_active', true);
-            }])->get();
-        });
+        $categories = Category::where('is_active', true)->topLevel()->with(['children' => function ($q) {
+            $q->where('is_active', true);
+        }])->get();
 
         return view('shop.index', compact('products', 'categories'));
     }

@@ -35,10 +35,9 @@
                 </button>
                 <div data-categories-panel class="hidden absolute left-0 top-full pt-3 z-20">
                     <div class="bg-white border rounded-xl shadow-lg p-4 grid grid-cols-2 gap-x-8 gap-y-4 w-[420px]">
-                        @php $navCategories = \Illuminate\Support\Facades\Cache::remember('shop:categories:sidebar:v2', 600, function () {
-                            return \App\Models\Category::where('is_active', true)->topLevel()->with(['children' => fn ($q) => $q->where('is_active', true)])->get();
-                        }); @endphp
+                        @php $navCategories = \App\Models\Category::where('is_active', true)->topLevel()->with(['children' => fn ($q) => $q->where('is_active', true)])->get(); @endphp
                         @forelse($navCategories as $navCat)
+                            @continue(!($navCat instanceof \App\Models\Category))
                             <div>
                                 <a href="{{ route('shop.index', ['category' => $navCat->slug]) }}" class="font-semibold text-gray-800 hover:text-blue-600 text-sm">{{ $navCat->name }}</a>
                                 @if($navCat->children->isNotEmpty())
