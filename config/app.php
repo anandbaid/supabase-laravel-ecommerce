@@ -15,6 +15,10 @@ return [
 
     'name' => env('APP_NAME', 'Laravel'),
 
+    // Secret token required to hit /system/clear-cache — set this in your
+    // .env so the maintenance cache-clear route isn't publicly guessable.
+    'cache_clear_token' => env('CACHE_CLEAR_TOKEN'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Environment
