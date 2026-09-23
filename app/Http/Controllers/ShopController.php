@@ -28,18 +28,13 @@ class ShopController extends Controller
             $query->whereNotNull('discount_price');
         }
 
-        if ($request->filled('min_price')) {
-            $query->where('price', '>=', $request->min_price);
-        }
-
-        if ($request->filled('max_price')) {
-            $query->where('price', '<=', $request->max_price);
-        }
+        // Filter and sort on the price shoppers see (the sale price when set).
+        $query->finalPriceBetween($request->input('min_price'), $request->input('max_price'));
 
         $sort = $request->get('sort', 'latest');
         match ($sort) {
-            'price_low' => $query->orderBy('price', 'asc'),
-            'price_high' => $query->orderBy('price', 'desc'),
+            'price_low' => $query->orderByFinalPrice('asc'),
+            'price_high' => $query->orderByFinalPrice('desc'),
             'name' => $query->orderBy('name', 'asc'),
             default => $query->latest(),
         };
