@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Services\LocalUserResolver;
 use App\Services\SupabaseAuthService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -125,28 +126,6 @@ class AuthController extends Controller
      */
     private function syncLocalUser(array $supabaseUser, string $email): User
     {
-        $user = null;
-
-        if (! empty($supabaseUser['id'])) {
-            $user = User::where('supabase_uid', $supabaseUser['id'])->first();
-        }
-
-        if (! $user) {
-            $user = User::where('email', $email)->first();
-        }
-
-        if (! $user) {
-            $user = User::create([
-                'name' => explode('@', $email)[0],
-                'email' => $email,
-                'password' => null,
-                'role' => 'customer',
-                'supabase_uid' => $supabaseUser['id'] ?? null,
-            ]);
-        } elseif (empty($user->supabase_uid) && ! empty($supabaseUser['id'])) {
-            $user->update(['supabase_uid' => $supabaseUser['id']]);
-        }
-
-        return $user;
+        return app(LocalUserResolver::class)->resolve($supabaseUser['id'] ?? null, $email);
     }
 }

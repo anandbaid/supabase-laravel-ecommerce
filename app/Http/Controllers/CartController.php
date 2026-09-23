@@ -4,14 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Models\Coupon;
 use App\Models\Product;
-use App\Models\Setting;
+use App\Services\CartPricing;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Session;
 
 class CartController extends Controller
 {
     /** Most units of a single product one order line can hold. */
-    public const MAX_QTY_PER_ITEM = 10;
+    public const MAX_QTY_PER_ITEM = CartPricing::MAX_QTY_PER_ITEM;
 
     private function cart(): array
     {
@@ -26,54 +26,15 @@ class CartController extends Controller
      */
     public static function calculate(): array
     {
-        $cart = Session::get('cart', []);
-        $products = Product::whereIn('id', array_keys($cart))->get()->keyBy('id');
-        $subtotal = 0;
-        $items = [];
+        $data = CartPricing::quote(Session::get('cart', []), Session::get('coupon_code'));
 
-        foreach ($cart as $productId => $qty) {
-            if (!isset($products[$productId])) {
-                continue;
-            }
-            $product = $products[$productId];
-            $lineSubtotal = $product->finalPrice() * $qty;
-            $subtotal += $lineSubtotal;
-            $items[] = ['product' => $product, 'qty' => $qty, 'subtotal' => $lineSubtotal];
+        // A coupon that no longer applies (expired, cart now below its
+        // minimum, ...) is dropped silently, as before.
+        if ($data['couponError'] !== null) {
+            Session::forget('coupon_code');
         }
 
-        $discount = 0;
-        $couponCode = Session::get('coupon_code');
-        $coupon = null;
-
-        if ($couponCode) {
-            $coupon = Coupon::where('code', strtoupper($couponCode))->first();
-            if (!$coupon || !$coupon->isValidFor($subtotal)) {
-                Session::forget('coupon_code');
-                $coupon = null;
-            } else {
-                $discount = $coupon->calculateDiscount($subtotal);
-            }
-        }
-
-        $taxRate = Setting::taxRate();
-        $taxable = max($subtotal - $discount, 0);
-        $taxAmount = round($taxable * ($taxRate / 100), 2);
-
-        // Flat shipping fee, waived once the (pre-discount) subtotal reaches the threshold.
-        $freeShippingThreshold = Setting::freeShippingThreshold();
-        $shipping = ($subtotal <= 0 || $subtotal >= $freeShippingThreshold)
-            ? 0.0
-            : Setting::shippingFee();
-        $freeShippingRemaining = ($subtotal > 0 && $subtotal < $freeShippingThreshold)
-            ? round($freeShippingThreshold - $subtotal, 2)
-            : 0.0;
-
-        $total = round($taxable + $taxAmount + $shipping, 2);
-
-        return compact(
-            'items', 'subtotal', 'coupon', 'discount', 'taxRate', 'taxAmount',
-            'shipping', 'freeShippingThreshold', 'freeShippingRemaining', 'total'
-        );
+        return $data;
     }
 
     public function index()
@@ -120,7 +81,7 @@ class CartController extends Controller
     /** Highest quantity allowed for a product: capped by stock and the per-item limit. */
     private function maxQty(Product $product): int
     {
-        return max(0, min(self::MAX_QTY_PER_ITEM, (int) $product->stock));
+        return CartPricing::maxQty($product);
     }
 
     public function add(Request $request, Product $product)
