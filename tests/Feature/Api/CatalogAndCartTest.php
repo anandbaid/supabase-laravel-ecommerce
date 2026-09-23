@@ -28,6 +28,29 @@ class CatalogAndCartTest extends ApiTestCase
         $this->getJson('/api/v1/products/suggest?q=te')->assertJsonCount(1, 'data');
     }
 
+    public function test_price_filter_and_sort_use_the_sale_price(): void
+    {
+        $this->product(['name' => 'Sale Chair', 'price' => 100, 'discount_price' => 40]);
+        $this->product(['name' => 'Plain Stool', 'price' => 60]);
+
+        // Shoppers see the chair at $40, so it belongs under a $50 cap...
+        $this->getJson('/api/v1/products?max_price=50')->assertOk()
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonPath('data.0.name', 'Sale Chair');
+        // ...and not above a $50 floor.
+        $this->getJson('/api/v1/products?min_price=50')->assertOk()
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonPath('data.0.name', 'Plain Stool');
+
+        $this->getJson('/api/v1/products?sort=price_low')->assertJsonPath('data.0.name', 'Sale Chair');
+        $this->getJson('/api/v1/products?sort=price_high')->assertJsonPath('data.0.name', 'Plain Stool');
+
+        // Same rules on the Blade shop page.
+        $this->withoutVite();
+        $this->get('/shop?max_price=50')->assertOk()->assertSee('Sale Chair')->assertDontSee('Plain Stool');
+        $this->get('/shop?min_price=abc')->assertOk();
+    }
+
     public function test_parent_category_includes_subcategories(): void
     {
         $parent = Category::create(['name' => 'Outdoors', 'is_active' => true]);

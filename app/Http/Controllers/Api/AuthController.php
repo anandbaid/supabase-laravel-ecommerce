@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rules\Password;
+use App\Services\AuthServiceUnavailableException;
 use RuntimeException;
 use Throwable;
 
@@ -97,6 +98,10 @@ class AuthController extends Controller
 
         try {
             $session = $this->supabaseAuth->refresh($data['refresh_token']);
+        } catch (AuthServiceUnavailableException $e) {
+            // Not the client's fault and the token may still be good: the
+            // storefront keeps the session and retries on the next request.
+            return response()->json(['message' => $e->getMessage()], 503);
         } catch (RuntimeException $e) {
             return response()->json(['message' => $e->getMessage()], 401);
         }

@@ -51,6 +51,12 @@ class AuthApiTest extends ApiTestCase
         $this->postJson('/api/v1/auth/refresh', ['refresh_token' => 'stale'])->assertUnauthorized();
     }
 
+    public function test_refresh_during_auth_outage_is_not_a_logout(): void
+    {
+        // Supabase 5xx: the token may be fine, so answer 503 (the storefront keeps the session).
+        $this->postJson('/api/v1/auth/refresh', ['refresh_token' => 'outage'])->assertStatus(503);
+    }
+
     public function test_protected_routes_need_a_valid_token(): void
     {
         $this->getJson('/api/v1/me')->assertUnauthorized();

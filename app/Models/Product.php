@@ -165,6 +165,29 @@ class Product extends Model
         return (int) round((($this->price - $this->discount_price) / $this->price) * 100);
     }
 
+    /** SQL for the price customers see and pay; keep in sync with finalPrice(). */
+    public const FINAL_PRICE_SQL = 'COALESCE(discount_price, price)';
+
+    /** Limit to products whose final (sale) price is within the given bounds; non-numeric bounds are ignored. */
+    public function scopeFinalPriceBetween($query, $min = null, $max = null)
+    {
+        if (is_numeric($min)) {
+            $query->whereRaw(self::FINAL_PRICE_SQL . ' >= ?', [$min]);
+        }
+        if (is_numeric($max)) {
+            $query->whereRaw(self::FINAL_PRICE_SQL . ' <= ?', [$max]);
+        }
+
+        return $query;
+    }
+
+    public function scopeOrderByFinalPrice($query, string $direction = 'asc')
+    {
+        $direction = strtolower($direction) === 'desc' ? 'desc' : 'asc';
+
+        return $query->orderByRaw(self::FINAL_PRICE_SQL . ' ' . $direction);
+    }
+
     public function scopeActive($query)
     {
         return $query->where('is_active', true);

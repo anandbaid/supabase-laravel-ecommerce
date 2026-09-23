@@ -224,6 +224,7 @@ class SupabaseAuthService
      * cookies and renews them shortly before the access token expires.
      *
      * @throws RuntimeException when the refresh token is invalid, expired or already used.
+     * @throws AuthServiceUnavailableException when Supabase Auth is unreachable or failing (5xx/429).
      */
     public function refresh(string $refreshToken): array
     {
@@ -244,10 +245,17 @@ class SupabaseAuthService
                 'expires_in' => $body['expires_in'] ?? null,
             ];
         } catch (RequestException $e) {
+            // 5xx and 429 are Supabase's problem, not the token's: report them
+            // separately so the session survives a temporary Auth outage.
+            $status = $e->response->status();
+            if ($status >= 500 || $status === 429) {
+                Log::warning("Supabase token refresh unavailable (HTTP {$status})");
+                throw new AuthServiceUnavailableException('The authentication service is temporarily unavailable.', previous: $e);
+            }
             throw new RuntimeException('Your session has expired. Please log in again.', previous: $e);
         } catch (Throwable $e) {
             Log::error('Supabase token refresh failed: ' . $e->getMessage(), ['exception' => $e]);
-            throw new RuntimeException('Could not reach the authentication service.', previous: $e);
+            throw new AuthServiceUnavailableException('Could not reach the authentication service.', previous: $e);
         }
     }
 

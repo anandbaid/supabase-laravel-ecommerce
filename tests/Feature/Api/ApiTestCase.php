@@ -48,6 +48,9 @@ abstract class ApiTestCase extends TestCase
             }
 
             if (str_contains($url, '/auth/v1/token?grant_type=refresh_token')) {
+                if (($request->data()['refresh_token'] ?? '') === 'outage') {
+                    return Http::response(['msg' => 'upstream error'], 503);
+                }
                 if (($request->data()['refresh_token'] ?? '') === 'stale') {
                     return Http::response(['error_description' => 'Invalid Refresh Token'], 400);
                 }
