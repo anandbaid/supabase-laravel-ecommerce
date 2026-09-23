@@ -42,6 +42,12 @@ return [
         'currency' => env('STRIPE_CURRENCY', 'usd'),
     ],
 
+    // The Next.js storefront. Card payments started from it return here
+    // after Stripe Checkout.
+    'frontend' => [
+        'url' => env('FRONTEND_URL', env('APP_URL')),
+    ],
+
     'supabase' => [
         'url' => env('SUPABASE_URL'),
         'anon_key' => env('SUPABASE_ANON_KEY'),

@@ -1,0 +1,3 @@
+# The Next.js storefront deploys separately (see storefront/README.md);
+# keep it out of the Laravel image.
+storefront/

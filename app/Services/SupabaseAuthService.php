@@ -207,12 +207,46 @@ class SupabaseAuthService
                 'email' => $body['user']['email'] ?? $email,
                 'access_token' => $body['access_token'] ?? null,
                 'refresh_token' => $body['refresh_token'] ?? null,
+                'expires_in' => $body['expires_in'] ?? null,
             ];
         } catch (RequestException $e) {
             $message = $e->response->json('error_description') ?? $e->response->json('msg') ?? 'Invalid email or password.';
             throw new RuntimeException($message, previous: $e);
         } catch (Throwable $e) {
             Log::error('Supabase signIn failed: ' . $e->getMessage(), ['exception' => $e]);
+            throw new RuntimeException('Could not reach the authentication service.', previous: $e);
+        }
+    }
+
+    /**
+     * Exchange a refresh token for a fresh session (access + refresh token).
+     * Used by the Next.js storefront, which keeps the tokens in httpOnly
+     * cookies and renews them shortly before the access token expires.
+     *
+     * @throws RuntimeException when the refresh token is invalid, expired or already used.
+     */
+    public function refresh(string $refreshToken): array
+    {
+        try {
+            $response = Http::withHeaders(['apikey' => $this->anonKey])
+                ->post("{$this->baseUrl}/token?grant_type=refresh_token", [
+                    'refresh_token' => $refreshToken,
+                ]);
+
+            $response->throw();
+            $body = $response->json();
+
+            return [
+                'id' => $body['user']['id'] ?? null,
+                'email' => $body['user']['email'] ?? null,
+                'access_token' => $body['access_token'] ?? null,
+                'refresh_token' => $body['refresh_token'] ?? null,
+                'expires_in' => $body['expires_in'] ?? null,
+            ];
+        } catch (RequestException $e) {
+            throw new RuntimeException('Your session has expired. Please log in again.', previous: $e);
+        } catch (Throwable $e) {
+            Log::error('Supabase token refresh failed: ' . $e->getMessage(), ['exception' => $e]);
             throw new RuntimeException('Could not reach the authentication service.', previous: $e);
         }
     }
